@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { writeCollateralActivity } from '@/lib/salesforce/sync';
 
 export async function POST(
@@ -27,8 +28,12 @@ export async function POST(
     return Response.json({ error: 'Link is not connected to a Salesforce opportunity' }, { status: 400 });
   }
 
-  // Get user's SF tokens
-  const { data: profile } = await supabase
+  // Get user's SF tokens (service client bypasses RLS)
+  const service = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+  const { data: profile } = await service
     .from('profiles')
     .select('salesforce_access_token, salesforce_instance_url')
     .eq('id', user.id)

@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getUserRole } from '@/lib/supabase/getRole';
 import { generateShortCode } from '@/lib/utils/format';
 
 export async function GET(request: NextRequest) {
@@ -8,12 +9,7 @@ export async function GET(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { data: { user: authUser } } = await supabase.auth.getUser();
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
+  const role = await getUserRole(user.id);
 
   // Admins and managers see all links; others see their own
   let query = supabase
@@ -21,8 +17,8 @@ export async function GET(request: NextRequest) {
     .select('*, asset:asset_id(id, name, content_type, file_url, file_type)')
     .order('created_at', { ascending: false });
 
-  if (!profile || !['admin', 'marketing_manager'].includes(profile.role)) {
-    query = query.eq('created_by', authUser!.id);
+  if (!role || !['admin', 'marketing_manager'].includes(role)) {
+    query = query.eq('created_by', user.id);
   }
 
   const { data: links, error } = await query;
@@ -110,6 +106,7 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL}/share/${shortCode}`;
+  const trackerBase = process.env.NEXT_PUBLIC_CF_TRACKER_URL ?? process.env.NEXT_PUBLIC_APP_URL;
+  const shareUrl = `${trackerBase}/${shortCode}`;
   return Response.json({ link, shareUrl }, { status: 201 });
 }

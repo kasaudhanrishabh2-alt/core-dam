@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getUserRole } from '@/lib/supabase/getRole';
 
 export async function GET(
   _req: NextRequest,
@@ -77,13 +78,8 @@ export async function DELETE(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (!profile || !['admin', 'marketing_manager'].includes(profile.role)) {
+  const role = await getUserRole(user.id);
+  if (!role || !['admin', 'marketing_manager'].includes(role)) {
     return Response.json({ error: 'Insufficient permissions' }, { status: 403 });
   }
 

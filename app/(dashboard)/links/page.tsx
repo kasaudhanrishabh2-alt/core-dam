@@ -197,7 +197,7 @@ export default function LinksPage() {
               </TableRow>
             ) : (
               links.map((link) => {
-                const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? ''}/share/${link.short_code}`;
+                const shareUrl = `${process.env.NEXT_PUBLIC_CF_TRACKER_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? ''}/${link.short_code}`;
                 return (
                   <TableRow
                     key={link.id}

@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { searchOpportunities, refreshAccessToken } from '@/lib/salesforce/sync';
 
 export async function GET(request: NextRequest) {
@@ -10,7 +11,11 @@ export async function GET(request: NextRequest) {
 
   const q = request.nextUrl.searchParams.get('q') ?? '';
 
-  const { data: profile } = await supabase
+  const service = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+  const { data: profile } = await service
     .from('profiles')
     .select('salesforce_access_token, salesforce_refresh_token, salesforce_instance_url')
     .eq('id', user.id)
@@ -37,7 +42,7 @@ export async function GET(request: NextRequest) {
         const refreshed = await refreshAccessToken(profile.salesforce_refresh_token as string);
         accessToken = refreshed.access_token;
 
-        await supabase
+        await service
           .from('profiles')
           .update({ salesforce_access_token: accessToken })
           .eq('id', user.id);

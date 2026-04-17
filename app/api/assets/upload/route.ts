@@ -37,8 +37,9 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Role check
-  const { data: profile } = await supabase
+  // Role check — use service client to bypass RLS
+  const serviceClient = getServiceClient();
+  const { data: profile } = await serviceClient
     .from('profiles')
     .select('role')
     .eq('id', user.id)
@@ -72,7 +73,6 @@ export async function POST(request: NextRequest) {
   const buffer = await file.arrayBuffer();
 
   // Upload to Supabase Storage
-  const serviceClient = getServiceClient();
   const { error: uploadError } = await serviceClient.storage
     .from('assets')
     .upload(storagePath, buffer, {

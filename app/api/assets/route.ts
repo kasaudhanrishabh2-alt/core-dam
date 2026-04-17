@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getUserRole } from '@/lib/supabase/getRole';
 import type { ContentType, AssetStatus } from '@/types';
 
 export async function GET(request: NextRequest) {
@@ -94,13 +95,8 @@ export async function POST(request: NextRequest) {
   }
 
   // Verify role
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (!profile || !['admin', 'marketing_manager', 'content_creator'].includes(profile.role)) {
+  const role = await getUserRole(user.id);
+  if (!role || !['admin', 'marketing_manager', 'content_creator'].includes(role)) {
     return Response.json({ error: 'Insufficient permissions' }, { status: 403 });
   }
 
