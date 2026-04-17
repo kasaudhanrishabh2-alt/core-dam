@@ -123,6 +123,12 @@ export async function POST(request: NextRequest) {
     expires_at?: string;
     tags?: Record<string, unknown>;
     storage_path?: string;
+    metadata?: {
+      project_name?: string | null;
+      launch_name?: string | null;
+      creative_type?: string | null;
+      comments?: string | null;
+    };
   } = await request.json();
 
   const { data: asset, error } = await getService()
@@ -140,6 +146,7 @@ export async function POST(request: NextRequest) {
       campaign_name: body.campaign_name ?? null,
       expires_at: body.expires_at ?? null,
       tags: body.tags ?? {},
+      metadata: body.metadata ?? {},
       status: 'active',
       uploaded_by: user.id,
     })

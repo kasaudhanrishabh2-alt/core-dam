@@ -24,6 +24,35 @@ export type ContentType =
   | 'campaign_report'
   | 'other';
 
+export type CreativeType =
+  | 'whatsapp_message'
+  | 'meta_ad'
+  | 'google_ad'
+  | 'brochure'
+  | 'email_newsletter'
+  | 'social_post'
+  | 'banner_ad'
+  | 'video_ad'
+  | 'landing_page'
+  | 'print_ad'
+  | 'outdoor_ad'
+  | 'other';
+
+export const CREATIVE_TYPE_LABELS: Record<CreativeType, string> = {
+  whatsapp_message: 'WhatsApp Message',
+  meta_ad: 'Meta Ad',
+  google_ad: 'Google Ad',
+  brochure: 'Brochure',
+  email_newsletter: 'Email Newsletter',
+  social_post: 'Social Media Post',
+  banner_ad: 'Banner Ad',
+  video_ad: 'Video Ad',
+  landing_page: 'Landing Page',
+  print_ad: 'Print Ad',
+  outdoor_ad: 'Outdoor / OOH Ad',
+  other: 'Other',
+};
+
 export type AssetStatus = 'draft' | 'active' | 'archived' | 'expired';
 
 export type DealStage =
@@ -73,7 +102,7 @@ export interface Asset {
   mime_type: string | null;
   extracted_text: string | null;
   tags: AssetTags;
-  metadata: Record<string, unknown>;
+  metadata: AssetMetadata;
   content_type: ContentType | null;
   deal_stage_relevance: DealStage[] | null;
   industry_tags: string[] | null;
@@ -91,6 +120,14 @@ export interface Asset {
   updated_at: string;
   // Joined fields
   uploader?: Pick<Profile, 'id' | 'full_name' | 'avatar_url'>;
+}
+
+export interface AssetMetadata {
+  project_name?: string | null;
+  launch_name?: string | null;
+  creative_type?: CreativeType | null;
+  comments?: string | null;
+  [key: string]: unknown;
 }
 
 export interface AssetTags {
