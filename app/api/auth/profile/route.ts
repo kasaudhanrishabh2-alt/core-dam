@@ -1,5 +1,13 @@
 import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
+
+function getService() {
+  return createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 export async function GET() {
   const supabase = await createClient();
@@ -7,7 +15,7 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { data: profile, error } = await supabase
+  const { data: profile, error } = await getService()
     .from('profiles')
     .select('*')
     .eq('id', user.id)
@@ -25,7 +33,7 @@ export async function PATCH(request: NextRequest) {
 
   const body: { full_name?: string; avatar_url?: string } = await request.json();
 
-  const { data: profile, error } = await supabase
+  const { data: profile, error } = await getService()
     .from('profiles')
     .update({
       ...(body.full_name !== undefined ? { full_name: body.full_name } : {}),

@@ -1,7 +1,15 @@
 import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { getUserRole } from '@/lib/supabase/getRole';
 import type { InsightType } from '@/types';
+
+function getService() {
+  return createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -14,9 +22,10 @@ export async function GET(request: NextRequest) {
   const search = searchParams.get('search');
   const campaign = searchParams.get('campaign');
 
-  let query = supabase
+  const service = getService();
+  let query = service
     .from('insights')
-    .select('*, author:author_id(id, full_name, avatar_url)')
+    .select('*')
     .eq('is_published', true)
     .order('created_at', { ascending: false });
 
@@ -57,7 +66,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { data: insight, error } = await supabase
+  const { data: insight, error } = await getService()
     .from('insights')
     .insert({
       title: body.title,

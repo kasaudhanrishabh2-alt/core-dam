@@ -1,7 +1,15 @@
 import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { getUserRole } from '@/lib/supabase/getRole';
 import type { ContentType, AssetStatus } from '@/types';
+
+function getService() {
+  return createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -19,9 +27,10 @@ export async function GET(request: NextRequest) {
   const search = searchParams.get('search');
   const sort = searchParams.get('sort') ?? 'newest';
 
-  let query = supabase
+  const service = getService();
+  let query = service
     .from('assets')
-    .select('*, uploader:uploaded_by(id, full_name, avatar_url)');
+    .select('*');
 
   // Filter by status
   if (status !== 'all' as string) {
@@ -69,7 +78,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Fetch distinct campaign names for filter dropdown
-  const { data: campaignRows } = await supabase
+  const { data: campaignRows } = await service
     .from('assets')
     .select('campaign_name')
     .not('campaign_name', 'is', null)
@@ -116,7 +125,7 @@ export async function POST(request: NextRequest) {
     storage_path?: string;
   } = await request.json();
 
-  const { data: asset, error } = await supabase
+  const { data: asset, error } = await getService()
     .from('assets')
     .insert({
       name: body.name,
