@@ -16,10 +16,14 @@ export async function autoTagAsset(
   extractedText: string,
   fileName: string
 ): Promise<AutoTagResult> {
+  const contentSection = extractedText?.trim()
+    ? `Document content (first 3000 chars): ${extractedText.substring(0, 3000)}`
+    : `Note: This is an image or binary file with no extractable text. Infer tags from the file name only.`;
+
   const prompt = `You are a marketing content analyst. Analyze this document and return ONLY valid JSON with no markdown, no code fences, no extra text — just the raw JSON object.
 
 Document name: ${fileName}
-Document content (first 3000 chars): ${extractedText.substring(0, 3000)}
+${contentSection}
 
 Return this exact JSON shape:
 {

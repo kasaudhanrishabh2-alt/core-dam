@@ -12,8 +12,8 @@ export async function POST(request: NextRequest) {
 
   const body: { extractedText: string; fileName: string } = await request.json();
 
-  if (!body.extractedText || !body.fileName) {
-    return Response.json({ error: 'extractedText and fileName are required' }, { status: 400 });
+  if (!body.fileName) {
+    return Response.json({ error: 'fileName is required' }, { status: 400 });
   }
 
   try {
