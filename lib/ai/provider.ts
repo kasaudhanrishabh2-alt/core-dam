@@ -28,7 +28,7 @@ function getGeminiClient() {
  */
 export async function generateText(prompt: string): Promise<string> {
   const genAI = getGeminiClient();
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
   const result: GenerateContentResult = await model.generateContent(prompt);
   return result.response.text();
 }
@@ -39,7 +39,7 @@ export async function generateText(prompt: string): Promise<string> {
  */
 export async function streamText(prompt: string): Promise<ReadableStream<Uint8Array>> {
   const genAI = getGeminiClient();
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
   const result = await model.generateContentStream(prompt);
   const encoder = new TextEncoder();
@@ -64,8 +64,20 @@ export async function streamText(prompt: string): Promise<ReadableStream<Uint8Ar
 export async function generateEmbedding(text: string): Promise<number[]> {
   const genAI = getGeminiClient();
   // text-embedding-004 produces 768-dim vectors, free via Gemini API
-  const model = genAI.getGenerativeModel({ model: 'text-embedding-004' });
-
-  const result = await model.embedContent(text.slice(0, 8000));
-  return result.embedding.values;
+  // Use REST directly to pass outputDimensionality: 768 (matching VECTOR(768) schema)
+  const apiKey = process.env.GOOGLE_AI_API_KEY;
+  if (!apiKey) throw new Error('GOOGLE_AI_API_KEY is not set');
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${apiKey}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'models/gemini-embedding-001',
+      content: { parts: [{ text: text.slice(0, 8000) }] },
+      outputDimensionality: 768,
+    }),
+  });
+  if (!res.ok) throw new Error(`Embedding error: ${await res.text()}`);
+  const data: { embedding: { values: number[] } } = await res.json();
+  return data.embedding.values;
 }

@@ -18,14 +18,15 @@ const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
  * Free tier: 1,500 req/day, 768-dimensional output.
  */
 async function generateEmbedding(text: string): Promise<number[]> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${GEMINI_API_KEY}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${GEMINI_API_KEY}`;
 
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'models/text-embedding-004',
+      model: 'models/gemini-embedding-001',
       content: { parts: [{ text: text.slice(0, 8000) }] },
+      outputDimensionality: 768,
     }),
   });
 
