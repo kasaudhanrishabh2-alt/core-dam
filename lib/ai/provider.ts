@@ -1,36 +1,34 @@
 /**
- * CORE DAM — AI Provider Abstraction
+ * CORE DAM — AI Provider
  *
- * Currently: Google Gemini 1.5 Flash (free tier)
- * To upgrade to Claude later: set AI_PROVIDER=claude and add ANTHROPIC_API_KEY
- *
- * Free tier limits (Gemini):
- *   - 1,500 requests/day
- *   - 15 requests/minute
- *   - 1M tokens/minute
+ * generateText / streamText  → Claude claude-haiku-4-5-20251001 (fast, cheap, excellent at structured output)
+ * generateEmbedding          → Gemini gemini-embedding-001 (stays on Gemini — embeddings API has separate quota)
  */
 
-import {
-  GoogleGenerativeAI,
-  type GenerateContentResult,
-} from '@google/generative-ai';
+import Anthropic from '@anthropic-ai/sdk';
 
-// ── Gemini client ─────────────────────────────────────────────
-function getGeminiClient() {
-  const apiKey = process.env.GOOGLE_AI_API_KEY;
-  if (!apiKey) throw new Error('GOOGLE_AI_API_KEY is not set');
-  return new GoogleGenerativeAI(apiKey);
+function getAnthropicClient() {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error('ANTHROPIC_API_KEY is not set');
+  return new Anthropic({ apiKey });
 }
+
+const CLAUDE_MODEL = 'claude-haiku-4-5-20251001';
 
 /**
  * Generates a text completion (non-streaming).
- * Used for: auto-tagging, campaign summaries, weekly digest.
+ * Used for: auto-tagging, creative analysis, campaign summaries, weekly digest.
  */
 export async function generateText(prompt: string): Promise<string> {
-  const genAI = getGeminiClient();
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-  const result: GenerateContentResult = await model.generateContent(prompt);
-  return result.response.text();
+  const client = getAnthropicClient();
+  const message = await client.messages.create({
+    model: CLAUDE_MODEL,
+    max_tokens: 2048,
+    messages: [{ role: 'user', content: prompt }],
+  });
+  const block = message.content[0];
+  if (block.type !== 'text') throw new Error('Unexpected response type from Claude');
+  return block.text;
 }
 
 /**
@@ -38,33 +36,38 @@ export async function generateText(prompt: string): Promise<string> {
  * Used for: Q&A chat interface.
  */
 export async function streamText(prompt: string): Promise<ReadableStream<Uint8Array>> {
-  const genAI = getGeminiClient();
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-
-  const result = await model.generateContentStream(prompt);
+  const client = getAnthropicClient();
   const encoder = new TextEncoder();
+
+  const stream = await client.messages.stream({
+    model: CLAUDE_MODEL,
+    max_tokens: 1024,
+    messages: [{ role: 'user', content: prompt }],
+  });
 
   return new ReadableStream<Uint8Array>({
     async start(controller) {
-      for await (const chunk of result.stream) {
-        const text = chunk.text();
-        if (text) controller.enqueue(encoder.encode(text));
+      for await (const chunk of stream) {
+        if (
+          chunk.type === 'content_block_delta' &&
+          chunk.delta.type === 'text_delta'
+        ) {
+          controller.enqueue(encoder.encode(chunk.delta.text));
+        }
       }
       controller.close();
+    },
+    cancel() {
+      stream.controller.abort();
     },
   });
 }
 
 /**
- * Generates a 768-dimensional embedding vector using Gemini.
- * Used for: semantic search via pgvector.
- *
- * Free tier: same as above — 1,500/day.
+ * Generates a 768-dimensional embedding vector.
+ * Stays on Gemini — embeddings have a separate quota from generation.
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
-  const genAI = getGeminiClient();
-  // text-embedding-004 produces 768-dim vectors, free via Gemini API
-  // Use REST directly to pass outputDimensionality: 768 (matching VECTOR(768) schema)
   const apiKey = process.env.GOOGLE_AI_API_KEY;
   if (!apiKey) throw new Error('GOOGLE_AI_API_KEY is not set');
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${apiKey}`;
