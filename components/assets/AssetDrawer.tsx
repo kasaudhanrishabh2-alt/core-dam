@@ -213,6 +213,7 @@ export function AssetDrawer({ asset, onClose, onShare, onArchive }: AssetDrawerP
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [tab, setTab] = useState<Tab>('details');
   const [analysing, setAnalysing] = useState(false);
+  const [analyseError, setAnalyseError] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<AssetAnalysis | null>(
     (asset?.metadata?.ai_analysis as AssetAnalysis) ?? null
   );
@@ -233,12 +234,19 @@ export function AssetDrawer({ asset, onClose, onShare, onArchive }: AssetDrawerP
 
   async function runAnalysis() {
     setAnalysing(true);
+    setAnalyseError(null);
     try {
       const res = await fetch(`/api/assets/${asset!.id}/analyze`, { method: 'POST' });
       const json = await res.json();
-      if (json.analysis) setAnalysis(json.analysis);
-    } catch {
-      // silently fail — user can retry
+      if (!res.ok) {
+        setAnalyseError(json.error ?? `Server error ${res.status}`);
+      } else if (json.analysis) {
+        setAnalysis(json.analysis);
+      } else {
+        setAnalyseError('No analysis returned — try again');
+      }
+    } catch (err) {
+      setAnalyseError(err instanceof Error ? err.message : 'Network error — check connection');
     } finally {
       setAnalysing(false);
     }
@@ -475,26 +483,41 @@ export function AssetDrawer({ asset, onClose, onShare, onArchive }: AssetDrawerP
               </>
             ) : (
               <div className="flex flex-col items-center justify-center h-64 px-8 text-center">
-                <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center mb-4">
-                  <Sparkles className="w-6 h-6 text-indigo-400" />
-                </div>
-                <p className="text-sm font-medium text-slate-800 mb-1">No analysis yet</p>
-                <p className="text-xs text-slate-500 mb-5 leading-relaxed">
-                  AI will break down narrative arc, creative scores, key claims, strengths, and improvement areas.
-                </p>
-                <Button
-                  onClick={runAnalysis}
-                  disabled={analysing}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
-                  size="sm"
-                >
-                  {analysing ? (
-                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                  ) : (
-                    <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-                  )}
-                  {analysing ? 'Analysing…' : 'Run AI Analysis'}
-                </Button>
+                {analysing ? (
+                  <>
+                    <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center mb-4">
+                      <Loader2 className="w-6 h-6 text-indigo-500 animate-spin" />
+                    </div>
+                    <p className="text-sm font-medium text-slate-800 mb-1">Analysing creative…</p>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      AI is reading the content. This takes 15–30 seconds.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center mb-4">
+                      <Sparkles className="w-6 h-6 text-indigo-400" />
+                    </div>
+                    <p className="text-sm font-medium text-slate-800 mb-1">No analysis yet</p>
+                    <p className="text-xs text-slate-500 mb-5 leading-relaxed">
+                      AI will break down narrative arc, creative scores, key claims, strengths, and improvement areas.
+                    </p>
+                    {analyseError && (
+                      <div className="mb-4 px-3 py-2 bg-red-50 border border-red-100 rounded-lg w-full text-left">
+                        <p className="text-xs text-red-600 font-medium">Analysis failed</p>
+                        <p className="text-xs text-red-500 mt-0.5">{analyseError}</p>
+                      </div>
+                    )}
+                    <Button
+                      onClick={runAnalysis}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                      size="sm"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                      {analyseError ? 'Retry Analysis' : 'Run AI Analysis'}
+                    </Button>
+                  </>
+                )}
               </div>
             )
           )}

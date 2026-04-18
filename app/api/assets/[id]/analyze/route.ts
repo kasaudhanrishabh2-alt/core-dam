@@ -1,4 +1,7 @@
 import { NextRequest } from 'next/server';
+
+// Gemini analysis can take 15-30s — extend beyond default 10s
+export const maxDuration = 60;
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { analyzeAssetCreative } from '@/lib/claude/autoTag';
