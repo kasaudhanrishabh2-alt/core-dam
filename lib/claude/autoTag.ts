@@ -6,7 +6,7 @@
  */
 
 import { generateText, streamText } from '@/lib/ai/provider';
-import type { AutoTagResult } from '@/types';
+import type { AutoTagResult, AssetAnalysis } from '@/types';
 
 /**
  * Auto-tags an uploaded asset using AI.
@@ -68,6 +68,58 @@ Instructions:
 - Keep response under 400 words`;
 
   return streamText(prompt);
+}
+
+/**
+ * Performs deep creative analysis on an asset — narrative arc, scores,
+ * strengths/weaknesses, proof points, and ideal use case.
+ */
+export async function analyzeAssetCreative(
+  extractedText: string,
+  fileName: string,
+  contentType: string | null
+): Promise<AssetAnalysis> {
+  const contentSection = extractedText?.trim()
+    ? `CONTENT (first 5000 chars):\n${extractedText.substring(0, 5000)}`
+    : `Note: Binary or image file — infer from file name and content type only.`;
+
+  const prompt = `You are an expert marketing creative analyst. Perform a deep analysis of this asset and return ONLY valid JSON — no markdown, no code fences.
+
+Asset Name: ${fileName}
+Content Type: ${contentType ?? 'unknown'}
+${contentSection}
+
+Return exactly this JSON shape:
+{
+  "narrative_arc": {
+    "hook": "opening hook or attention-grabber (1 sentence, or null)",
+    "problem": "pain point addressed (1-2 sentences, or null)",
+    "solution": "how product/service solves it (1-2 sentences, or null)",
+    "proof": "evidence, stats, social proof used (1-2 sentences, or null)",
+    "cta": "call-to-action exact text or description (or null)"
+  },
+  "key_claims": ["specific claims e.g. '40% cost reduction', 'fastest in class'"],
+  "proof_points": ["specific evidence: stats, customer names, awards, certifications"],
+  "value_propositions": ["core value props the reader should take away"],
+  "scores": {
+    "clarity": 7,
+    "persuasiveness": 6,
+    "specificity": 8,
+    "cta_strength": 5
+  },
+  "strengths": ["2-4 specific strengths of this creative"],
+  "weaknesses": ["2-4 specific weaknesses or gaps"],
+  "missing_elements": ["elements typical for this content type that are absent"],
+  "ideal_use_case": "1-2 sentences on when and how to best deploy this asset",
+  "competing_narratives": "alternative angle that could make this stronger, or null"
+}
+
+Scores are integers 0-10. Be specific and critical — vague feedback is not useful.`;
+
+  const raw = await generateText(prompt);
+  const cleaned = raw.replace(/```(?:json)?\n?/g, '').trim();
+  const parsed = JSON.parse(cleaned);
+  return { ...parsed, analyzed_at: new Date().toISOString() } as AssetAnalysis;
 }
 
 /**

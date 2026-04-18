@@ -140,6 +140,32 @@ export interface AssetTags {
   [key: string]: unknown;
 }
 
+// ── AI Creative Analysis ─────────────────────────────────────
+export interface AssetAnalysis {
+  narrative_arc: {
+    hook: string | null;
+    problem: string | null;
+    solution: string | null;
+    proof: string | null;
+    cta: string | null;
+  };
+  key_claims: string[];
+  proof_points: string[];
+  value_propositions: string[];
+  scores: {
+    clarity: number;
+    persuasiveness: number;
+    specificity: number;
+    cta_strength: number;
+  };
+  strengths: string[];
+  weaknesses: string[];
+  missing_elements: string[];
+  ideal_use_case: string;
+  competing_narratives: string | null;
+  analyzed_at: string;
+}
+
 // ── Auto-tag result from Claude ──────────────────────────────
 export interface AutoTagResult {
   content_type: ContentType;
