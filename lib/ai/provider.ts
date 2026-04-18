@@ -1,34 +1,33 @@
 /**
  * CORE DAM — AI Provider
  *
- * generateText / streamText  → Claude claude-haiku-4-5-20251001 (fast, cheap, excellent at structured output)
- * generateEmbedding          → Gemini gemini-embedding-001 (stays on Gemini — embeddings API has separate quota)
+ * generateText / streamText  → Groq (free tier, Llama 3.3 70B)
+ * generateEmbedding          → Gemini gemini-embedding-001 (separate quota)
  */
 
-import Anthropic from '@anthropic-ai/sdk';
+import Groq from 'groq-sdk';
 
-function getAnthropicClient() {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error('ANTHROPIC_API_KEY is not set');
-  return new Anthropic({ apiKey });
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
+
+function getGroqClient() {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) throw new Error('GROQ_API_KEY is not set');
+  return new Groq({ apiKey });
 }
-
-const CLAUDE_MODEL = 'claude-haiku-4-5-20251001';
 
 /**
  * Generates a text completion (non-streaming).
- * Used for: auto-tagging, creative analysis, campaign summaries, weekly digest.
+ * Used for: auto-tagging, creative analysis, campaign summaries.
  */
 export async function generateText(prompt: string): Promise<string> {
-  const client = getAnthropicClient();
-  const message = await client.messages.create({
-    model: CLAUDE_MODEL,
-    max_tokens: 2048,
+  const client = getGroqClient();
+  const completion = await client.chat.completions.create({
+    model: GROQ_MODEL,
     messages: [{ role: 'user', content: prompt }],
+    max_tokens: 2048,
+    temperature: 0.3,
   });
-  const block = message.content[0];
-  if (block.type !== 'text') throw new Error('Unexpected response type from Claude');
-  return block.text;
+  return completion.choices[0]?.message?.content ?? '';
 }
 
 /**
@@ -36,29 +35,24 @@ export async function generateText(prompt: string): Promise<string> {
  * Used for: Q&A chat interface.
  */
 export async function streamText(prompt: string): Promise<ReadableStream<Uint8Array>> {
-  const client = getAnthropicClient();
+  const client = getGroqClient();
   const encoder = new TextEncoder();
 
-  const stream = await client.messages.stream({
-    model: CLAUDE_MODEL,
-    max_tokens: 1024,
+  const stream = await client.chat.completions.create({
+    model: GROQ_MODEL,
     messages: [{ role: 'user', content: prompt }],
+    max_tokens: 1024,
+    temperature: 0.4,
+    stream: true,
   });
 
   return new ReadableStream<Uint8Array>({
     async start(controller) {
       for await (const chunk of stream) {
-        if (
-          chunk.type === 'content_block_delta' &&
-          chunk.delta.type === 'text_delta'
-        ) {
-          controller.enqueue(encoder.encode(chunk.delta.text));
-        }
+        const text = chunk.choices[0]?.delta?.content ?? '';
+        if (text) controller.enqueue(encoder.encode(text));
       }
       controller.close();
-    },
-    cancel() {
-      stream.controller.abort();
     },
   });
 }
