@@ -66,46 +66,50 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="w-full max-w-md">
+    <div className="w-full">
       {/* Card */}
-      <div className="bg-white rounded-2xl shadow-2xl shadow-black/20 p-8">
+      <div className="rounded-2xl p-8 shadow-raised"
+           style={{ background: 'oklch(1 0 0)', border: '1px solid oklch(0.888 0.010 78 / 0.5)' }}>
         {/* Logo */}
         <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center">
-            <Zap className="w-5 h-5 text-white" />
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+               style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' }}>
+            <Zap className="w-5 h-5 text-white" strokeWidth={2.5} />
           </div>
           <div>
-            <h1 className="text-xl font-semibold text-slate-900">CORE</h1>
-            <p className="text-xs text-slate-500">Collateral Operations & Revenue Engine</p>
+            <h1 className="text-[15px] font-semibold" style={{ color: 'var(--foreground)' }}>CORE</h1>
+            <p className="text-[11px]" style={{ color: 'var(--muted-foreground)' }}>Collateral Operations & Revenue Engine</p>
           </div>
         </div>
 
-        <h2 className="text-2xl font-semibold text-slate-900 mb-1">
+        <h2 className="text-2xl font-bold mb-1" style={{ color: 'var(--foreground)', letterSpacing: '-0.025em' }}>
           Welcome back
         </h2>
-        <p className="text-slate-500 text-sm mb-6">
+        <p className="text-sm mb-6" style={{ color: 'var(--muted-foreground)' }}>
           Sign in to access your marketing asset library
         </p>
 
         {/* Mode toggle */}
-        <div className="flex bg-slate-100 rounded-lg p-1 mb-6">
+        <div className="flex rounded-xl p-1 mb-6" style={{ background: 'var(--muted)' }}>
           <button
             onClick={() => { setMode('signin'); setMagicSent(false); }}
-            className={`flex-1 py-1.5 px-3 rounded-md text-sm font-medium transition-colors ${
+            className={`flex-1 py-1.5 px-3 rounded-lg text-sm font-medium transition-all ${
               mode === 'signin'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
+                ? 'bg-white shadow-sm'
+                : 'hover:opacity-70'
             }`}
+            style={{ color: mode === 'signin' ? 'var(--foreground)' : 'var(--muted-foreground)' }}
           >
             Password
           </button>
           <button
             onClick={() => { setMode('magic_link'); setMagicSent(false); }}
-            className={`flex-1 py-1.5 px-3 rounded-md text-sm font-medium transition-colors ${
+            className={`flex-1 py-1.5 px-3 rounded-lg text-sm font-medium transition-all ${
               mode === 'magic_link'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
+                ? 'bg-white shadow-sm'
+                : 'hover:opacity-70'
             }`}
+            style={{ color: mode === 'magic_link' ? 'var(--foreground)' : 'var(--muted-foreground)' }}
           >
             Magic Link
           </button>
@@ -114,16 +118,18 @@ export default function LoginPage() {
         {/* Magic link sent state */}
         {magicSent ? (
           <div className="text-center py-6">
-            <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-3">
-              <Mail className="w-6 h-6 text-indigo-600" />
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3"
+                 style={{ background: 'oklch(0.455 0.215 268 / 0.1)' }}>
+              <Mail className="w-5 h-5" style={{ color: 'var(--primary)' }} />
             </div>
-            <h3 className="font-semibold text-slate-900 mb-1">Check your email</h3>
-            <p className="text-sm text-slate-500">
-              We sent a magic link to <strong>{email}</strong>. Click it to sign in.
+            <h3 className="font-semibold mb-1" style={{ color: 'var(--foreground)' }}>Check your email</h3>
+            <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
+              We sent a magic link to <strong style={{ color: 'var(--foreground)' }}>{email}</strong>. Click it to sign in.
             </p>
             <button
               onClick={() => setMagicSent(false)}
-              className="mt-4 text-sm text-indigo-600 hover:underline"
+              className="mt-4 text-sm underline-offset-4 hover:underline"
+              style={{ color: 'var(--primary)' }}
             >
               Use a different email
             </button>
@@ -167,7 +173,8 @@ export default function LoginPage() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
+              className="w-full text-white font-semibold"
+              style={{ background: 'var(--primary)' }}
             >
               {loading ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -199,7 +206,8 @@ export default function LoginPage() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
+              className="w-full text-white font-semibold"
+              style={{ background: 'var(--primary)' }}
             >
               {loading ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -212,7 +220,7 @@ export default function LoginPage() {
         )}
       </div>
 
-      <p className="text-center text-slate-400 text-xs mt-6">
+      <p className="text-center text-xs mt-5" style={{ color: 'rgba(255,255,255,0.25)' }}>
         CORE DAM — For authorized marketing team members only
       </p>
     </div>
