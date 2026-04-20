@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef } from 'react';
 import {
   Upload, X, Loader2, Check, AlertCircle, Tag,
-  Youtube, FolderOpen, File, AlertTriangle,
+  PlayCircle, FolderOpen, File, AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -421,7 +421,7 @@ export function AssetUploader({ onComplete, onClose }: AssetUploaderProps) {
                   <FolderOpen className="w-3.5 h-3.5" /> Folder
                 </TabsTrigger>
                 <TabsTrigger value="youtube" className="flex-1 text-xs gap-1.5">
-                  <Youtube className="w-3.5 h-3.5" /> YouTube
+                  <PlayCircle className="w-3.5 h-3.5" /> YouTube
                 </TabsTrigger>
               </TabsList>
 
