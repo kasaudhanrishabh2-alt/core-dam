@@ -19,6 +19,8 @@ const DEFAULT_FILTERS: AssetFilters = {
   deal_stage: '',
   status: 'active',
   sort: 'newest',
+  project_name: '',
+  launch_name: '',
 };
 
 export default function AssetsPage() {
@@ -29,6 +31,8 @@ export default function AssetsPage() {
   const [drawerAsset, setDrawerAsset] = useState<Asset | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [campaigns, setCampaigns] = useState<string[]>([]);
+  const [projects, setProjects] = useState<string[]>([]);
+  const [launches, setLaunches] = useState<string[]>([]);
 
   const loadAssets = useCallback(async () => {
     setLoading(true);
@@ -38,14 +42,18 @@ export default function AssetsPage() {
     if (filters.deal_stage) params.set('deal_stage', filters.deal_stage);
     if (filters.status !== 'all') params.set('status', filters.status);
     if (filters.search) params.set('search', filters.search);
+    if (filters.project_name) params.set('project_name', filters.project_name);
+    if (filters.launch_name) params.set('launch_name', filters.launch_name);
     params.set('sort', filters.sort);
 
     try {
       const res = await fetch(`/api/assets?${params.toString()}`);
       if (!res.ok) throw new Error('Failed to load assets');
-      const data: { assets: Asset[]; campaigns: string[] } = await res.json();
+      const data: { assets: Asset[]; campaigns: string[]; projects: string[]; launches: string[] } = await res.json();
       setAssets(data.assets);
-      if (data.campaigns.length > 0) setCampaigns(data.campaigns);
+      if (data.campaigns?.length > 0) setCampaigns(data.campaigns);
+      if (data.projects?.length > 0) setProjects(data.projects);
+      if (data.launches?.length > 0) setLaunches(data.launches);
     } catch {
       toast.error('Failed to load assets');
     } finally {
@@ -84,16 +92,20 @@ export default function AssetsPage() {
 
   async function archiveAsset(id: string) {
     try {
-      await fetch(`/api/assets/${id}`, {
+      const res = await fetch(`/api/assets/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'archived' }),
       });
+      if (!res.ok) {
+        const err: { error: string } = await res.json();
+        throw new Error(err.error ?? 'Archive failed');
+      }
       toast.success('Asset archived');
       setDrawerAsset(null);
       loadAssets();
-    } catch {
-      toast.error('Failed to archive asset');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to archive asset');
     }
   }
 
@@ -127,7 +139,7 @@ export default function AssetsPage() {
       </div>
 
       {/* Filters */}
-      <FilterBar filters={filters} onChange={setFilters} campaigns={campaigns} />
+      <FilterBar filters={filters} onChange={setFilters} campaigns={campaigns} projects={projects} launches={launches} />
 
       {/* Grid */}
       {loading ? (

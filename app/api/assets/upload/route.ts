@@ -60,6 +60,7 @@ export async function POST(request: NextRequest) {
   if (!file) {
     return Response.json({ error: 'No file provided' }, { status: 400 });
   }
+  const fileHash = formData.get('fileHash') as string | null;
 
   const validation = validateFile(file);
   if (!validation.valid) {
@@ -98,5 +99,6 @@ export async function POST(request: NextRequest) {
     storagePath,
     fileUrl,
     extractedText,
+    fileHash: fileHash ?? null,
   });
 }

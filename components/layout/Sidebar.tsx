@@ -30,7 +30,7 @@ const navSections = [
   {
     label: 'Intelligence',
     items: [
-      { href: '/insights', label: 'Insights', icon: Lightbulb },
+      { href: '/insights', label: 'Intelligence', icon: Lightbulb },
       { href: '/analytics', label: 'Analytics', icon: BarChart3 },
     ],
   },

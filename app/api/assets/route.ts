@@ -26,6 +26,8 @@ export async function GET(request: NextRequest) {
   const status = (searchParams.get('status') ?? 'active') as AssetStatus;
   const search = searchParams.get('search');
   const sort = searchParams.get('sort') ?? 'newest';
+  const project_name = searchParams.get('project_name');
+  const launch_name = searchParams.get('launch_name');
 
   const service = getService();
   let query = service
@@ -53,6 +55,14 @@ export async function GET(request: NextRequest) {
     query = query.ilike('name', `%${search}%`);
   }
 
+  if (project_name) {
+    query = query.eq("metadata->>project_name" as string, project_name);
+  }
+
+  if (launch_name) {
+    query = query.eq("metadata->>launch_name" as string, launch_name);
+  }
+
   // Sort
   switch (sort) {
     case 'oldest':
@@ -77,22 +87,29 @@ export async function GET(request: NextRequest) {
     return Response.json({ error: error.message }, { status: 500 });
   }
 
-  // Fetch distinct campaign names for filter dropdown
-  const { data: campaignRows } = await service
+  // Fetch distinct values for filter dropdowns (always against full active set)
+  const { data: metaRows } = await service
     .from('assets')
-    .select('campaign_name')
-    .not('campaign_name', 'is', null)
+    .select('campaign_name, metadata')
     .eq('status', 'active');
 
-  const campaigns = [
-    ...new Set(
-      (campaignRows ?? [])
-        .map((r: { campaign_name: string | null }) => r.campaign_name)
-        .filter(Boolean) as string[]
-    ),
-  ];
+  const campaigns = [...new Set(
+    (metaRows ?? []).map((r: { campaign_name: string | null }) => r.campaign_name).filter(Boolean) as string[]
+  )];
 
-  return Response.json({ assets: assets ?? [], campaigns });
+  const projects = [...new Set(
+    (metaRows ?? [])
+      .map((r: { metadata: { project_name?: string | null } }) => r.metadata?.project_name)
+      .filter(Boolean) as string[]
+  )].sort();
+
+  const launches = [...new Set(
+    (metaRows ?? [])
+      .map((r: { metadata: { launch_name?: string | null } }) => r.metadata?.launch_name)
+      .filter(Boolean) as string[]
+  )].sort();
+
+  return Response.json({ assets: assets ?? [], campaigns, projects, launches });
 }
 
 export async function POST(request: NextRequest) {
@@ -128,6 +145,7 @@ export async function POST(request: NextRequest) {
       launch_name?: string | null;
       creative_type?: string | null;
       comments?: string | null;
+      file_hash?: string | null;
     };
   } = await request.json();
 

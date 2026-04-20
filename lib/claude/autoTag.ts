@@ -20,7 +20,9 @@ export async function autoTagAsset(
     ? `Document content (first 3000 chars): ${extractedText.substring(0, 3000)}`
     : `Note: This is an image or binary file with no extractable text. Infer tags from the file name only.`;
 
-  const prompt = `You are a marketing content analyst. Analyze this document and return ONLY valid JSON with no markdown, no code fences, no extra text — just the raw JSON object.
+  const prompt = `You are a marketing content analyst for HOABL (House of Abhinandan Lodha), a premium real estate company in India. HOABL sells branded plotted developments — projects like One Goa, One Nagpur, One Alibaug, One Bengaluru, One Ayodhya. Each project has multiple launch phases. Their marketing assets include brochures, WhatsApp creatives, Meta ads, site visit documents, payment plan PDFs, location maps, videos, and email campaigns.
+
+Analyze this document and return ONLY valid JSON with no markdown, no code fences, no extra text — just the raw JSON object.
 
 Document name: ${fileName}
 ${contentSection}
@@ -28,14 +30,14 @@ ${contentSection}
 Return this exact JSON shape:
 {
   "content_type": "one of: case_study|whitepaper|one_pager|presentation|email_template|battlecard|infographic|proposal_template|roi_calculator|competitive_intel|campaign_report|other",
-  "title_suggestion": "clean title for this asset",
-  "description": "2-3 sentence description of what this asset is and who it is for",
-  "campaign_name": "campaign name if detectable, else null",
-  "industry_tags": ["array","of","industry","verticals","mentioned"],
-  "product_focus": ["products or services featured"],
+  "title_suggestion": "clean title for this asset (include project name if detectable)",
+  "description": "2-3 sentence description of what this asset is, which HOABL project it relates to, and who the target audience is",
+  "campaign_name": "HOABL project or campaign name if detectable (e.g. One Goa Phase 2), else null",
+  "industry_tags": ["real_estate", "and any other relevant tags like premium_plots|gated_community|holiday_homes"],
+  "product_focus": ["project names or product types featured, e.g. One Goa|plotted_development|villa"],
   "deal_stage_relevance": ["one or more of: awareness|consideration|decision|post_sale"],
-  "key_topics": ["5-10 key topic tags"],
-  "audience_persona": "who this is written for",
+  "key_topics": ["5-10 key topic tags relevant to real estate marketing"],
+  "audience_persona": "who this is targeted at — e.g. HNI investors, NRI buyers, weekend home seekers",
   "tone": "one of: formal|casual|technical|executive|educational",
   "confidence_score": 0.0
 }`;
@@ -54,7 +56,9 @@ export async function answerFromLibrary(
   query: string,
   contextChunks: string[]
 ): Promise<ReadableStream<Uint8Array>> {
-  const prompt = `You are a marketing intelligence assistant. Answer the user's question using ONLY the content from the library excerpts provided. If the answer is not in the library, say so clearly and suggest what content might be missing.
+  const prompt = `You are a marketing intelligence assistant for HOABL (House of Abhinandan Lodha), India's premium branded land developer. HOABL projects include One Goa, One Nagpur, One Alibaug, One Bengaluru, One Ayodhya, and others.
+
+Answer the user's question using ONLY the content from the library excerpts provided. If the answer is not in the library, say so clearly and suggest what content might be missing.
 
 USER QUESTION: ${query}
 
@@ -62,9 +66,9 @@ LIBRARY EXCERPTS:
 ${contextChunks.map((chunk, i) => `[Source ${i + 1}]: ${chunk}`).join('\n\n')}
 
 Instructions:
-- Answer directly and specifically
+- Answer directly and specifically, using HOABL terminology (project names, launch phases, etc.)
 - Cite sources using [Source N] notation
-- If no sources are relevant, say "I couldn't find this in your content library" and suggest creating that content
+- If no sources are relevant, say "I couldn't find this in your content library" and suggest what HOABL asset should be created
 - Keep response under 400 words`;
 
   return streamText(prompt);

@@ -1,13 +1,23 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Search, MessageSquare, Send, Loader2, ExternalLink, BookOpen } from 'lucide-react';
+import { Search, MessageSquare, Send, Loader2, ExternalLink, BookOpen, Calendar, Eye, Share2, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ContentTypeBadge } from '@/components/shared/ContentTypeBadge';
-import type { SearchResult } from '@/types';
+import type { SearchResult, AssetMetadata } from '@/types';
+import { formatRelativeDate } from '@/lib/utils/format';
 import { cn } from '@/lib/utils';
+
+interface EnrichedSearchResult extends SearchResult {
+  metadata?: AssetMetadata;
+  created_at?: string | null;
+  view_count?: number;
+  share_count?: number;
+  campaign_name?: string | null;
+  ai_summary?: string | null;
+}
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -19,7 +29,7 @@ interface ChatMessage {
 export default function SearchPage() {
   // ── Asset Search ─────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchResults, setSearchResults] = useState<EnrichedSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
 
   async function handleSearch(e: React.FormEvent) {
@@ -31,7 +41,7 @@ export default function SearchPage() {
       const res = await fetch(
         `/api/search?q=${encodeURIComponent(searchQuery)}&limit=12`
       );
-      const data: { results: SearchResult[] } = await res.json();
+      const data: { results: EnrichedSearchResult[] } = await res.json();
       setSearchResults(data.results);
     } finally {
       setSearching(false);
@@ -148,11 +158,11 @@ export default function SearchPage() {
           {searchResults.length === 0 && !searching && (
             <div className="flex flex-wrap gap-2">
               {[
-                'case studies for enterprise',
-                'ROI calculator templates',
-                'competitive battlecards',
-                'onboarding email sequences',
-                'Q4 campaign reports',
+                'One Goa brochures',
+                'WhatsApp creatives Nagpur',
+                'Meta ads festive campaign',
+                'payment plan documents',
+                'site visit presentations',
               ].map((q) => (
                 <button
                   key={q}
@@ -178,12 +188,13 @@ export default function SearchPage() {
               {searchResults.map((result) => (
                 <div
                   key={result.id}
-                  className="bg-white border border-slate-200 rounded-xl p-4 hover:border-slate-300 hover:shadow-sm transition-all"
+                  className="rounded-xl p-4 transition-all hover:-translate-y-px"
+                  style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                        <h3 className="font-medium text-slate-900">{result.name}</h3>
+                        <h3 className="font-semibold text-[14px]" style={{ color: 'var(--foreground)' }}>{result.name}</h3>
                         <ContentTypeBadge contentType={result.content_type} />
                         <span
                           className={cn(
@@ -198,17 +209,52 @@ export default function SearchPage() {
                           {Math.round(result.similarity * 100)}% match
                         </span>
                       </div>
-                      {result.excerpt && (
-                        <p className="text-sm text-slate-500 line-clamp-3 leading-relaxed">
-                          {result.excerpt}
+
+                      {/* Project / Launch */}
+                      {(result.metadata?.project_name || result.campaign_name) && (
+                        <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+                          {result.metadata?.project_name && (
+                            <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium"
+                                  style={{ background: 'oklch(0.455 0.215 268 / 0.1)', color: 'var(--primary)' }}>
+                              <MapPin className="w-3 h-3" />
+                              {result.metadata.project_name}{result.metadata.launch_name ? ` · ${result.metadata.launch_name}` : ''}
+                            </span>
+                          )}
+                          {result.campaign_name && (
+                            <span className="text-xs px-2 py-0.5 rounded-full"
+                                  style={{ background: 'var(--muted)', color: 'var(--muted-foreground)' }}>
+                              {result.campaign_name}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {(result.ai_summary || result.excerpt) && (
+                        <p className="text-sm line-clamp-2 leading-relaxed mb-2"
+                           style={{ color: 'var(--muted-foreground)' }}>
+                          {result.ai_summary || result.excerpt}
                         </p>
                       )}
+
+                      <div className="flex items-center gap-3 text-xs" style={{ color: 'var(--muted-foreground)' }}>
+                        {result.created_at && (
+                          <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{formatRelativeDate(result.created_at)}</span>
+                        )}
+                        {(result.view_count ?? 0) > 0 && (
+                          <span className="flex items-center gap-1"><Eye className="w-3 h-3" />{result.view_count}</span>
+                        )}
+                        {(result.share_count ?? 0) > 0 && (
+                          <span className="flex items-center gap-1"><Share2 className="w-3 h-3" />{result.share_count}</span>
+                        )}
+                      </div>
                     </div>
+
                     <a
                       href={result.file_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex-shrink-0 p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                      className="flex-shrink-0 p-2 rounded-lg transition-colors"
+                      style={{ color: 'var(--muted-foreground)' }}
                     >
                       <ExternalLink className="w-4 h-4" />
                     </a>

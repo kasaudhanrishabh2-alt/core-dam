@@ -6,12 +6,12 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
 const PAGE_META: Record<string, { title: string; subtitle?: string }> = {
-  '/assets':    { title: 'Asset Library',   subtitle: 'Manage and discover marketing collateral' },
-  '/search':    { title: 'Search & Q&A',    subtitle: 'Find assets and ask questions about your content' },
-  '/links':     { title: 'Share Links',     subtitle: 'Track prospect engagement on shared content' },
-  '/insights':  { title: 'Insights',        subtitle: 'Win stories, competitive intel, content learnings' },
-  '/analytics': { title: 'Analytics',       subtitle: 'Performance, engagement, and content attribution' },
-  '/settings':  { title: 'Settings',        subtitle: 'Profile, integrations, and preferences' },
+  '/assets':    { title: 'Asset Library',    subtitle: 'All creatives, brochures, videos and documents across projects' },
+  '/search':    { title: 'Search & Q&A',     subtitle: 'Find assets by project, launch or topic — or ask AI' },
+  '/links':     { title: 'Share Links',      subtitle: 'Send trackable collateral to prospects and track engagement' },
+  '/insights':  { title: 'Intelligence',     subtitle: 'AI-generated insights from your marketing library' },
+  '/analytics': { title: 'Analytics',        subtitle: 'Asset performance, engagement, and Salesforce attribution' },
+  '/settings':  { title: 'Settings',         subtitle: 'Profile, integrations, and preferences' },
 };
 
 function getPageMeta(pathname: string) {

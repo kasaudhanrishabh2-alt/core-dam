@@ -41,7 +41,10 @@ export async function searchAssets(
     return [];
   }
 
-  return (data as SearchResult[]) ?? [];
+  // Filter out low-relevance results — anything below 0.50 is noise,
+  // especially image assets whose embeddings are filename-only.
+  const MIN_SIMILARITY = 0.50;
+  return ((data as SearchResult[]) ?? []).filter(r => r.similarity >= MIN_SIMILARITY);
 }
 
 /**

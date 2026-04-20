@@ -77,8 +77,8 @@ export default function LoginPage() {
             <Zap className="w-5 h-5 text-white" strokeWidth={2.5} />
           </div>
           <div>
-            <h1 className="text-[15px] font-semibold" style={{ color: 'var(--foreground)' }}>CORE</h1>
-            <p className="text-[11px]" style={{ color: 'var(--muted-foreground)' }}>Collateral Operations & Revenue Engine</p>
+            <h1 className="text-[15px] font-semibold" style={{ color: 'var(--foreground)' }}>HOABL CORE</h1>
+            <p className="text-[11px]" style={{ color: 'var(--muted-foreground)' }}>Marketing Asset Intelligence Platform</p>
           </div>
         </div>
 
@@ -86,7 +86,7 @@ export default function LoginPage() {
           Welcome back
         </h2>
         <p className="text-sm mb-6" style={{ color: 'var(--muted-foreground)' }}>
-          Sign in to access your marketing asset library
+          Sign in to access HOABL&apos;s marketing intelligence platform
         </p>
 
         {/* Mode toggle */}
@@ -221,7 +221,7 @@ export default function LoginPage() {
       </div>
 
       <p className="text-center text-xs mt-5" style={{ color: 'rgba(255,255,255,0.25)' }}>
-        CORE DAM — For authorized marketing team members only
+        HOABL CORE — For authorized marketing team members only
       </p>
     </div>
   );
