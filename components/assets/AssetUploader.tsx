@@ -566,7 +566,7 @@ export function AssetUploader({ onComplete, onClose }: AssetUploaderProps) {
               style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
             >
               {mode === 'youtube'
-                ? <><Youtube className="w-4 h-4 mr-2" /> Add to Library</>
+                ? <><PlayCircle className="w-4 h-4 mr-2" /> Add to Library</>
                 : mode === 'folder'
                 ? <><FolderOpen className="w-4 h-4 mr-2" /> Upload {files.length} File{files.length !== 1 ? 's' : ''}</>
                 : <><Upload className="w-4 h-4 mr-2" /> Upload & Analyze</>
