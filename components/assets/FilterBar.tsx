@@ -108,7 +108,7 @@ export function FilterBar({ filters, onChange, campaigns, projects = [], launche
         {projects.length > 0 && (
           <Select
             value={filters.project_name || 'all'}
-            onValueChange={(v) => update({ project_name: v === 'all' ? '' : v, launch_name: '' })}
+            onValueChange={(v) => update({ project_name: (v ?? '') === 'all' ? '' : (v ?? ''), launch_name: '' })}
           >
             <SelectTrigger className="h-8 text-xs w-40">
               <SelectValue placeholder="All projects" />
@@ -126,7 +126,7 @@ export function FilterBar({ filters, onChange, campaigns, projects = [], launche
         {filters.project_name && availableLaunches.length > 0 && (
           <Select
             value={filters.launch_name || 'all'}
-            onValueChange={(v) => update({ launch_name: v === 'all' ? '' : v })}
+            onValueChange={(v) => update({ launch_name: (v ?? '') === 'all' ? '' : (v ?? '') })}
           >
             <SelectTrigger className="h-8 text-xs w-36">
               <SelectValue placeholder="All launches" />
@@ -160,7 +160,7 @@ export function FilterBar({ filters, onChange, campaigns, projects = [], launche
         {campaigns.length > 0 && (
           <Select
             value={filters.campaign_name || 'all'}
-            onValueChange={(v) => update({ campaign_name: v === 'all' ? '' : v })}
+            onValueChange={(v) => update({ campaign_name: (v ?? '') === 'all' ? '' : (v ?? '') })}
           >
             <SelectTrigger className="h-8 text-xs w-44">
               <SelectValue placeholder="Campaign" />
