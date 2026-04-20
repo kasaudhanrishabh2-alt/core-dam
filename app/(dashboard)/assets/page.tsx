@@ -99,14 +99,11 @@ export default function AssetsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
+      {/* Action bar */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Asset Library</h1>
-          <p className="text-slate-500 text-sm mt-0.5">
-            {loading ? 'Loading…' : `${assets.length} asset${assets.length !== 1 ? 's' : ''}`}
-          </p>
-        </div>
+        <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
+          {loading ? 'Loading…' : `${assets.length} asset${assets.length !== 1 ? 's' : ''}`}
+        </p>
         <div className="flex items-center gap-2">
           {selectedIds.size > 0 && (
             <Button
@@ -121,7 +118,7 @@ export default function AssetsPage() {
           )}
           <Button
             onClick={() => setUploadOpen(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
           >
             <Plus className="w-4 h-4 mr-1.5" />
             Upload Asset
