@@ -58,9 +58,13 @@ export async function streamText(prompt: string): Promise<ReadableStream<Uint8Ar
 }
 
 /**
- * Generates a text completion using Gemini 1.5 Flash with an inline image or video.
+ * Generates a text completion using Gemini 2.0 Flash with an inline image or video.
  * Used for: auto-tagging and creative analysis of images/videos.
  * Supported mimeTypes: image/jpeg, image/png, image/gif, image/webp, video/mp4, etc.
+ *
+ * REQUIRES: Google Cloud billing enabled on the project that owns GOOGLE_AI_API_KEY.
+ * The free tier has 0 quota for generation models — only the embedding model works without billing.
+ * Enable billing at: https://console.cloud.google.com/billing
  */
 export async function generateTextWithVision(
   prompt: string,
@@ -70,7 +74,8 @@ export async function generateTextWithVision(
   const apiKey = process.env.GOOGLE_AI_API_KEY;
   if (!apiKey) throw new Error('GOOGLE_AI_API_KEY is not set');
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  // gemini-2.0-flash supports vision and is the current stable model on this API key
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -85,7 +90,13 @@ export async function generateTextWithVision(
     }),
   });
 
-  if (!res.ok) throw new Error(`Gemini vision error: ${await res.text()}`);
+  if (res.status === 429) {
+    throw new Error('Gemini vision quota exceeded. Enable billing at console.cloud.google.com/billing to use image/video analysis.');
+  }
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Gemini vision error (${res.status}): ${body}`);
+  }
   const data = await res.json() as {
     candidates: Array<{ content: { parts: Array<{ text: string }> } }>;
   };
