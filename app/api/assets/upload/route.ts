@@ -92,13 +92,25 @@ export async function POST(request: NextRequest) {
 
   const fileUrl = signedData?.signedUrl ?? '';
 
-  // Extract text for searchability
+  // Extract text for searchability (PDFs only)
   const extractedText = extractTextFromBuffer(buffer, file.type);
+
+  // For images and videos, return base64 so the auto-tag route can use Gemini vision
+  const isVisual = file.type.startsWith('image/') || file.type.startsWith('video/');
+  let fileBase64: string | null = null;
+  if (isVisual) {
+    // Cap at 10 MB inline — larger videos should go through YouTube ingestion instead
+    if (buffer.byteLength <= 10 * 1024 * 1024) {
+      fileBase64 = Buffer.from(buffer).toString('base64');
+    }
+  }
 
   return Response.json({
     storagePath,
     fileUrl,
     extractedText,
     fileHash: fileHash ?? null,
+    fileBase64,
+    mimeType: file.type,
   });
 }

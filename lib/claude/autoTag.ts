@@ -5,7 +5,7 @@
  * To upgrade: swap generateText/streamText in lib/ai/provider.ts
  */
 
-import { generateText, streamText } from '@/lib/ai/provider';
+import { generateText, generateTextWithVision, streamText } from '@/lib/ai/provider';
 import type { AutoTagResult, AssetAnalysis } from '@/types';
 
 /**
@@ -175,4 +175,91 @@ Write a concise executive summary covering:
 Keep it under 500 words. Use clear headings.`;
 
   return generateText(prompt);
+}
+
+// ─── Vision-based analysis (images & videos) ──────────────────────────────
+
+const VISION_TAG_PROMPT = (fileName: string) =>
+  `You are a marketing content analyst for HOABL (House of Abhinandan Lodha), a premium real estate company in India. HOABL sells branded plotted developments — projects like One Goa, One Nagpur, One Alibaug, One Bengaluru, One Ayodhya. Their marketing assets include brochures, WhatsApp creatives, Meta ads, site visit documents, payment plan PDFs, location maps, and videos.
+
+Carefully analyse this image/video and return ONLY valid JSON with no markdown, no code fences.
+
+File name: ${fileName}
+
+Return exactly this JSON shape:
+{
+  "content_type": "one of: case_study|whitepaper|one_pager|presentation|email_template|battlecard|infographic|proposal_template|roi_calculator|competitive_intel|campaign_report|other",
+  "title_suggestion": "descriptive title for this creative (include project name if visible)",
+  "description": "2-3 sentence description of what this creative shows, which HOABL project it relates to, and the marketing objective",
+  "campaign_name": "HOABL project or campaign name if visible (e.g. One Goa Phase 2), else null",
+  "industry_tags": ["real_estate", "and any relevant tags like premium_plots|gated_community|holiday_homes"],
+  "product_focus": ["project names or product types visible, e.g. One Goa|plotted_development"],
+  "deal_stage_relevance": ["one or more of: awareness|consideration|decision|post_sale"],
+  "key_topics": ["5-10 key topic tags based on what you can see"],
+  "audience_persona": "who this is targeted at — e.g. HNI investors, NRI buyers, weekend home seekers",
+  "tone": "one of: formal|casual|technical|executive|educational",
+  "confidence_score": 0.0
+}`;
+
+/**
+ * Auto-tags an image or video asset using Gemini 1.5 Flash vision.
+ * @param fileBase64 - Base64-encoded file contents (no data-URI prefix)
+ * @param mimeType   - MIME type, e.g. "image/jpeg"
+ * @param fileName   - Original file name for context
+ */
+export async function autoTagAssetWithVision(
+  fileBase64: string,
+  mimeType: string,
+  fileName: string
+): Promise<AutoTagResult> {
+  const raw = await generateTextWithVision(VISION_TAG_PROMPT(fileName), fileBase64, mimeType);
+  const cleaned = raw.replace(/```(?:json)?\n?/g, '').trim();
+  return JSON.parse(cleaned) as AutoTagResult;
+}
+
+/**
+ * Performs deep creative analysis on an image/video asset using Gemini vision.
+ */
+export async function analyzeAssetCreativeWithVision(
+  fileBase64: string,
+  mimeType: string,
+  fileName: string,
+  contentType: string | null
+): Promise<AssetAnalysis> {
+  const prompt = `You are an expert marketing creative analyst. Carefully examine this image/video and perform a deep analysis. Return ONLY valid JSON — no markdown, no code fences.
+
+Asset Name: ${fileName}
+Content Type: ${contentType ?? 'unknown'}
+
+Return exactly this JSON shape:
+{
+  "narrative_arc": {
+    "hook": "opening hook or main attention-grabber visible in the creative (1 sentence, or null)",
+    "problem": "pain point addressed, if any (1-2 sentences, or null)",
+    "solution": "how the product/project solves it, if shown (1-2 sentences, or null)",
+    "proof": "evidence, stats, social proof, or landmarks visible (1-2 sentences, or null)",
+    "cta": "call-to-action text or button visible in the creative, or null"
+  },
+  "key_claims": ["specific claims visible, e.g. price points, location benefits, amenities"],
+  "proof_points": ["specific evidence visible: location, amenity shots, award badges, testimonials"],
+  "value_propositions": ["core value props the viewer would take away from this creative"],
+  "scores": {
+    "clarity": 7,
+    "persuasiveness": 6,
+    "specificity": 8,
+    "cta_strength": 5
+  },
+  "strengths": ["2-4 specific visual/messaging strengths of this creative"],
+  "weaknesses": ["2-4 specific weaknesses or gaps"],
+  "missing_elements": ["elements typical for this content type that are absent"],
+  "ideal_use_case": "1-2 sentences on the best channel and moment to deploy this creative",
+  "competing_narratives": "alternative creative angle that could make this stronger, or null"
+}
+
+Scores are integers 0-10. Be specific — describe what you actually see.`;
+
+  const raw = await generateTextWithVision(prompt, fileBase64, mimeType);
+  const cleaned = raw.replace(/```(?:json)?\n?/g, '').trim();
+  const parsed = JSON.parse(cleaned);
+  return { ...parsed, analyzed_at: new Date().toISOString() } as AssetAnalysis;
 }

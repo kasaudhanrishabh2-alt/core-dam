@@ -4,7 +4,7 @@ import { NextRequest } from 'next/server';
 export const maxDuration = 60;
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
-import { analyzeAssetCreative } from '@/lib/claude/autoTag';
+import { analyzeAssetCreative, analyzeAssetCreativeWithVision } from '@/lib/claude/autoTag';
 
 function getService() {
   return createServiceClient(
@@ -26,18 +26,33 @@ export async function POST(
 
   const { data: asset, error } = await service
     .from('assets')
-    .select('id, name, extracted_text, content_type, metadata')
+    .select('id, name, extracted_text, content_type, metadata, mime_type, file_url')
     .eq('id', id)
     .single();
 
   if (error || !asset) return Response.json({ error: 'Asset not found' }, { status: 404 });
 
+  const mimeType: string = asset.mime_type ?? '';
+  const isVisual = mimeType.startsWith('image/') || mimeType.startsWith('video/');
+
   try {
-    const analysis = await analyzeAssetCreative(
-      asset.extracted_text ?? '',
-      asset.name,
-      asset.content_type
-    );
+    let analysis;
+
+    if (isVisual && asset.file_url) {
+      // Download file from storage and pass to Gemini vision
+      const fileRes = await fetch(asset.file_url);
+      if (!fileRes.ok) throw new Error('Failed to fetch asset file for analysis');
+      const buffer = await fileRes.arrayBuffer();
+      if (buffer.byteLength > 10 * 1024 * 1024) {
+        // Fall back to text analysis for large files
+        analysis = await analyzeAssetCreative(asset.extracted_text ?? '', asset.name, asset.content_type);
+      } else {
+        const fileBase64 = Buffer.from(buffer).toString('base64');
+        analysis = await analyzeAssetCreativeWithVision(fileBase64, mimeType, asset.name, asset.content_type);
+      }
+    } else {
+      analysis = await analyzeAssetCreative(asset.extracted_text ?? '', asset.name, asset.content_type);
+    }
 
     const { error: updateError } = await service
       .from('assets')

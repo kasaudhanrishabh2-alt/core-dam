@@ -58,6 +58,41 @@ export async function streamText(prompt: string): Promise<ReadableStream<Uint8Ar
 }
 
 /**
+ * Generates a text completion using Gemini 1.5 Flash with an inline image or video.
+ * Used for: auto-tagging and creative analysis of images/videos.
+ * Supported mimeTypes: image/jpeg, image/png, image/gif, image/webp, video/mp4, etc.
+ */
+export async function generateTextWithVision(
+  prompt: string,
+  fileBase64: string,
+  mimeType: string
+): Promise<string> {
+  const apiKey = process.env.GOOGLE_AI_API_KEY;
+  if (!apiKey) throw new Error('GOOGLE_AI_API_KEY is not set');
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{
+        parts: [
+          { text: prompt },
+          { inlineData: { mimeType, data: fileBase64 } },
+        ],
+      }],
+      generationConfig: { temperature: 0.3, maxOutputTokens: 2048 },
+    }),
+  });
+
+  if (!res.ok) throw new Error(`Gemini vision error: ${await res.text()}`);
+  const data = await res.json() as {
+    candidates: Array<{ content: { parts: Array<{ text: string }> } }>;
+  };
+  return data.candidates[0]?.content?.parts[0]?.text ?? '';
+}
+
+/**
  * Generates a 768-dimensional embedding vector.
  * Stays on Gemini — embeddings have a separate quota from generation.
  */

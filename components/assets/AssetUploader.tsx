@@ -162,7 +162,10 @@ export function AssetUploader({ onComplete, onClose }: AssetUploaderProps) {
         throw new Error(err.error ?? 'Upload failed');
       }
 
-      const data: { storagePath: string; fileUrl: string; extractedText: string } = await res.json();
+      const data: {
+        storagePath: string; fileUrl: string; extractedText: string;
+        fileBase64?: string | null; mimeType?: string | null;
+      } = await res.json();
       setStoragePath(data.storagePath);
       setFileUrl(data.fileUrl);
       setProgress(100);
@@ -172,7 +175,12 @@ export function AssetUploader({ onComplete, onClose }: AssetUploaderProps) {
         const tagRes = await fetch('/api/assets/auto-tag', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ extractedText: data.extractedText, fileName: file.name }),
+          body: JSON.stringify({
+            extractedText: data.extractedText,
+            fileName: file.name,
+            fileBase64: data.fileBase64 ?? null,
+            mimeType: data.mimeType ?? null,
+          }),
         });
         if (tagRes.ok) {
           const tagData: AutoTagResult = await tagRes.json();
