@@ -74,8 +74,8 @@ export async function generateTextWithVision(
   const apiKey = process.env.GOOGLE_AI_API_KEY;
   if (!apiKey) throw new Error('GOOGLE_AI_API_KEY is not set');
 
-  // gemini-2.0-flash supports vision and is the current stable model on this API key
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+  // gemini-flash-latest: resolves to the current stable Flash model; has quota on this project
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
