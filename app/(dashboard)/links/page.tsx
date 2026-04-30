@@ -156,14 +156,14 @@ export default function LinksPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Trackable Links</h1>
-          <p className="text-slate-500 text-sm mt-0.5">
+          <h1 className="text-2xl font-semibold" style={{ color: 'var(--foreground)' }}>Trackable Links</h1>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
             Share assets with engagement tracking and Salesforce attribution
           </p>
         </div>
         <Button
           onClick={() => { resetForm(); setCreateOpen(true); }}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white"
+          style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
         >
           <Plus className="w-4 h-4 mr-1.5" /> Create Link
         </Button>
@@ -362,16 +362,16 @@ export default function LinksPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label className="text-xs">Recipient Name</Label>
-                  <Input value={recipientName} onChange={(e) => setRecipientName(e.target.value)} placeholder="Jane Smith" />
+                  <Input value={recipientName} onChange={(e) => setRecipientName(e.target.value)} placeholder="Rajesh Mehta" />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Recipient Email</Label>
-                  <Input type="email" value={recipientEmail} onChange={(e) => setRecipientEmail(e.target.value)} placeholder="jane@acme.com" />
+                  <Input type="email" value={recipientEmail} onChange={(e) => setRecipientEmail(e.target.value)} placeholder="rajesh@example.com" />
                 </div>
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Recipient Company</Label>
-                <Input value={recipientCompany} onChange={(e) => setRecipientCompany(e.target.value)} placeholder="Acme Corp" />
+                <Input value={recipientCompany} onChange={(e) => setRecipientCompany(e.target.value)} placeholder="e.g. Tata Capital, NRI Investor" />
               </div>
 
               {/* Salesforce */}
@@ -431,7 +431,7 @@ export default function LinksPage() {
               <Button
                 onClick={createLink}
                 disabled={creating || !selectedAsset}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
+                style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }} className="w-full"
               >
                 {creating ? (
                   <Activity className="w-4 h-4 animate-spin mr-2" />

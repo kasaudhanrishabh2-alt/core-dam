@@ -73,8 +73,8 @@ function SettingsContent() {
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Settings</h1>
-        <p className="text-slate-500 text-sm mt-0.5">Manage your profile, integrations, and notifications</p>
+        <h1 className="text-2xl font-semibold" style={{ color: 'var(--foreground)' }}>Settings</h1>
+        <p className="text-sm mt-0.5" style={{ color: 'var(--muted-foreground)' }}>Manage your profile, integrations, and notifications</p>
       </div>
 
       <Tabs defaultValue="profile">
@@ -178,8 +178,8 @@ function SettingsContent() {
               <div className="mt-4 pt-4 border-t border-slate-100">
                 <p className="text-xs text-slate-500 mb-3">Salesforce is connected. Token stored securely.</p>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
-                    Test Connection
+                  <Button variant="outline" size="sm" disabled title="Connection verified on sync">
+                    ✓ Connected
                   </Button>
                   <Button
                     variant="ghost"
@@ -230,31 +230,35 @@ function SettingsContent() {
 
         {/* Notifications tab */}
         <TabsContent value="notifications" className="pt-4">
-          <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-4">
-            <h2 className="font-semibold text-slate-900">Email Notifications</h2>
-            <p className="text-sm text-slate-500">
-              Manage which events trigger email notifications via Resend.
-            </p>
+          <div className="rounded-xl p-5 space-y-4" style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold" style={{ color: 'var(--foreground)' }}>Email Notifications</h2>
+                <p className="text-sm mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
+                  Configure which events trigger email alerts via Resend.
+                </p>
+              </div>
+              <span className="text-xs px-2 py-1 rounded-lg font-medium"
+                    style={{ background: 'var(--muted)', color: 'var(--muted-foreground)' }}>
+                Coming soon
+              </span>
+            </div>
             {[
               { label: 'Link opened', desc: 'Get notified when a recipient opens your shared link' },
               { label: 'Asset expiring soon', desc: 'Reminder 7 days before an asset expires' },
               { label: 'New insight shared', desc: 'When a team member posts a win story or learning' },
               { label: 'Weekly digest', desc: 'AI-generated summary of the week\'s content performance' },
             ].map(({ label, desc }) => (
-              <div key={label} className="flex items-center justify-between py-3 border-b border-slate-100 last:border-0">
+              <div key={label} className="flex items-center justify-between py-3 last:pb-0"
+                   style={{ borderBottom: '1px solid var(--border)' }}>
                 <div>
-                  <p className="text-sm font-medium text-slate-800">{label}</p>
-                  <p className="text-xs text-slate-400">{desc}</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>{label}</p>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--muted-foreground)' }}>{desc}</p>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" defaultChecked className="sr-only peer" />
-                  <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600" />
-                </label>
+                <div className="w-9 h-5 rounded-full opacity-40 cursor-not-allowed"
+                     style={{ background: 'var(--primary)' }} />
               </div>
             ))}
-            <Button className="bg-indigo-600 hover:bg-indigo-700 text-white" size="sm">
-              Save Preferences
-            </Button>
           </div>
         </TabsContent>
       </Tabs>

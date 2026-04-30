@@ -6,7 +6,7 @@ import {
   Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
 import {
-  TrendingUp, Link2, Eye, Clock, DollarSign, AlertTriangle,
+  TrendingUp, Link2, Eye, Clock, IndianRupee, AlertTriangle,
   ArrowUpRight, Layers, Sparkles,
 } from 'lucide-react';
 import { ContentTypeBadge } from '@/components/shared/ContentTypeBadge';
@@ -66,9 +66,9 @@ const STAT_CONFIG = [
   {
     key: 'attributed_revenue',
     label: 'Attributed Revenue',
-    icon: DollarSign,
+    icon: IndianRupee,
     format: (v: number) => formatCurrency(v),
-    sub: 'From won deals (SF)',
+    sub: 'Connect Salesforce to track',
     accent: '#10b981',
     bg: 'from-emerald-50 to-teal-50',
   },
@@ -284,23 +284,30 @@ export default function AnalyticsPage() {
           <div>
             <h2 className="text-[14px] font-semibold" style={{ color: 'var(--foreground)' }}>Deal Stage Coverage</h2>
             <p className="text-[12px] mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
-              Revenue attribution requires Salesforce integration
+              Asset distribution across buyer journey stages
             </p>
           </div>
           <span className="text-[11px] px-2 py-1 rounded-lg font-medium"
                 style={{ background: 'var(--muted)', color: 'var(--muted-foreground)' }}>
-            SF Required
+            Salesforce Required
           </span>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {DEAL_STAGES.map(({ stage, color, bg, text }) => (
-            <div key={stage}
-                 className={cn('rounded-xl p-4 text-center transition-all hover:-translate-y-0.5', bg)}>
-              <p className={cn('text-[11px] font-semibold uppercase tracking-wide mb-2', text)}>{stage}</p>
-              <p className="text-3xl font-bold" style={{ color }}>0</p>
-              <p className="text-[11px] mt-0.5" style={{ color: `${color}99` }}>assets</p>
-            </div>
-          ))}
+        <div className="rounded-xl border-2 border-dashed py-10 flex flex-col items-center gap-3 text-center"
+             style={{ borderColor: 'var(--border)' }}>
+          <div className="w-10 h-10 rounded-full flex items-center justify-center"
+               style={{ background: 'color-mix(in oklch, var(--primary) 10%, transparent)' }}>
+            <TrendingUp className="w-5 h-5" style={{ color: 'var(--primary)' }} />
+          </div>
+          <div>
+            <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>Connect Salesforce to unlock</p>
+            <p className="text-xs mt-0.5 max-w-xs" style={{ color: 'var(--muted-foreground)' }}>
+              See which assets are used at each stage of the buyer journey and attribute revenue to marketing collateral
+            </p>
+          </div>
+          <a href="/settings" className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+             style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}>
+            Go to Settings → Integrations
+          </a>
         </div>
       </div>
     </div>
