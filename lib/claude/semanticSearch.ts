@@ -79,6 +79,8 @@ export async function searchInsights(
 
 /**
  * Retrieves top-k asset chunks for RAG (Q&A interface).
+ * For image/video assets with no extracted_text, falls back to the
+ * AI-generated description + key_topics so the LLM has real context.
  */
 export async function retrieveContextChunks(
   query: string,
@@ -92,10 +94,30 @@ export async function retrieveContextChunks(
 
   const hasGoodMatch = results[0].similarity > 0.75;
 
-  const chunks = results.map(
-    (r) =>
-      `Asset: "${r.name}" (${r.content_type ?? 'unknown'})\n${r.excerpt ?? '(no preview)'}`
-  );
+  const chunks = results.map((r) => {
+    // Prefer extracted text (PDFs/docs); fall back to AI-generated metadata for images/videos
+    const tags = r.tags ?? {};
+    const aiDescription = tags.description as string ?? '';
+    const keyTopics = (tags.key_topics as string[] ?? []).join(', ');
+    const audiencePersona = tags.audience_persona as string ?? '';
+    const productFocus = (tags.product_focus as string[] ?? []).join(', ');
+
+    let context = r.excerpt ?? '';
+    if (!context && aiDescription) {
+      context = aiDescription;
+    }
+    if (!context) {
+      // Last resort — build from structured tags
+      const parts = [
+        keyTopics && `Topics: ${keyTopics}`,
+        productFocus && `Products: ${productFocus}`,
+        audiencePersona && `Audience: ${audiencePersona}`,
+      ].filter(Boolean);
+      context = parts.join(' | ') || '(no preview available)';
+    }
+
+    return `Asset: "${r.name}" (${r.content_type ?? 'unknown'}, similarity: ${Math.round(r.similarity * 100)}%)\n${context}`;
+  });
 
   return { chunks, assetIds: results.map((r) => r.id), hasGoodMatch };
 }

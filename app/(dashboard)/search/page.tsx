@@ -117,9 +117,9 @@ export default function SearchPage() {
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Search & Q&A</h1>
-        <p className="text-slate-500 text-sm mt-0.5">
-          Find assets with semantic search or ask questions about your content library
+        <h1 className="text-2xl font-semibold" style={{ color: 'var(--foreground)' }}>Search & Q&A</h1>
+        <p className="text-sm mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
+          Find assets with semantic search or ask questions grounded in your content library
         </p>
       </div>
 
@@ -139,7 +139,7 @@ export default function SearchPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
-                placeholder="Try: 'enterprise fintech case studies' or 'Q3 email templates'"
+                placeholder="Try: 'One Goa brochure' or 'NRI investor payment plan'"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 text-base"
@@ -287,9 +287,10 @@ export default function SearchPage() {
                   </p>
                   <div className="mt-3 space-y-1.5">
                     {[
-                      'What messaging did we use for mid-market prospects?',
-                      'Which case studies cover the fintech vertical?',
-                      'What were our key learnings from the Q3 campaign?',
+                      'What are the key selling points for One Goa?',
+                      'Which assets are best for NRI investors?',
+                      'What payment plan options do we offer?',
+                      'Summarise our awareness-stage collateral',
                     ].map((q) => (
                       <button
                         key={q}
