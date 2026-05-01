@@ -77,6 +77,7 @@ export function AssetUploader({ onComplete, onClose }: AssetUploaderProps) {
   const [tags, setTags] = useState<AutoTagResult | null>(null);
   const [storagePath, setStoragePath] = useState('');
   const [fileUrl, setFileUrl] = useState('');
+  const [extractedText, setExtractedText] = useState('');
   const [editedTags, setEditedTags] = useState<Partial<AutoTagResult>>({});
   const [expiryDate, setExpiryDate] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -182,6 +183,7 @@ export function AssetUploader({ onComplete, onClose }: AssetUploaderProps) {
       // Always update state (used by single-file review step)
       setStoragePath(data.storagePath);
       setFileUrl(data.fileUrl);
+      setExtractedText(data.extractedText ?? '');
       setProgress(100);
       setStep('tagging');
 
@@ -218,6 +220,7 @@ export function AssetUploader({ onComplete, onClose }: AssetUploaderProps) {
           tags: resolvedTags,
           fileHash: hash,
           mimeType: data.mimeType ?? file.type,
+          extractedText: data.extractedText ?? '',
         });
       } else {
         // Single file: show review so user can edit tags before saving
@@ -241,7 +244,7 @@ export function AssetUploader({ onComplete, onClose }: AssetUploaderProps) {
    */
   async function saveFolderFile(
     file: File,
-    data: { storagePath: string; fileUrl: string; tags: AutoTagResult | null; fileHash: string | null; mimeType: string }
+    data: { storagePath: string; fileUrl: string; tags: AutoTagResult | null; fileHash: string | null; mimeType: string; extractedText?: string }
   ) {
     setStep('saving');
     const idx = folderIdxRef.current;
@@ -255,6 +258,7 @@ export function AssetUploader({ onComplete, onClose }: AssetUploaderProps) {
         file_type: file.name.split('.').pop()?.toLowerCase() ?? 'unknown',
         file_size_bytes: file.size ?? null,
         mime_type: data.mimeType || null,
+        extracted_text: data.extractedText || null,
         storage_path: data.storagePath,
         content_type: t?.content_type || null,
         industry_tags: t?.industry_tags || [],
@@ -427,6 +431,7 @@ export function AssetUploader({ onComplete, onClose }: AssetUploaderProps) {
         file_type: file?.name.split('.').pop()?.toLowerCase() ?? 'unknown',
         file_size_bytes: file?.size ?? null,
         mime_type: file?.type ?? null,
+        extracted_text: extractedText || null,
         storage_path: storagePath,
         content_type: mergedTags.content_type || null,
         industry_tags: mergedTags.industry_tags || [],
@@ -487,7 +492,7 @@ export function AssetUploader({ onComplete, onClose }: AssetUploaderProps) {
   function resetAll() {
     setStep('select'); setFiles([]); setTags(null); setEditedTags({});
     setError(null); setDuplicateWarning(null); setStoragePath(''); setFileUrl('');
-    setCurrentFileIdx(0); setYoutubeUrl(''); setYoutubeTitle('');
+    setExtractedText(''); setCurrentFileIdx(0); setYoutubeUrl(''); setYoutubeTitle('');
   }
 
   const isPreUploadComplete = projectName.trim().length > 0;

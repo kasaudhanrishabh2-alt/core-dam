@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { getUserRole } from '@/lib/supabase/getRole';
+import { generateEmbedding } from '@/lib/ai/provider';
 import type { ContentType, AssetStatus } from '@/types';
 
 function getService() {
@@ -133,6 +134,7 @@ export async function POST(request: NextRequest) {
     file_type: string;
     file_size_bytes?: number;
     mime_type?: string;
+    extracted_text?: string;
     content_type?: ContentType;
     industry_tags?: string[];
     deal_stage_relevance?: string[];
@@ -149,7 +151,9 @@ export async function POST(request: NextRequest) {
     };
   } = await request.json();
 
-  const { data: asset, error } = await getService()
+  const service = getService();
+
+  const { data: asset, error } = await service
     .from('assets')
     .insert({
       name: body.name,
@@ -158,6 +162,7 @@ export async function POST(request: NextRequest) {
       file_type: body.file_type,
       file_size_bytes: body.file_size_bytes ?? null,
       mime_type: body.mime_type ?? null,
+      extracted_text: body.extracted_text ?? null,
       content_type: body.content_type ?? null,
       industry_tags: body.industry_tags ?? [],
       deal_stage_relevance: body.deal_stage_relevance ?? [],
@@ -173,6 +178,34 @@ export async function POST(request: NextRequest) {
 
   if (error) {
     return Response.json({ error: error.message }, { status: 500 });
+  }
+
+  // Generate and store embedding for semantic search.
+  // Build rich text from all searchable fields — name + description + AI tags + extracted text.
+  // This runs synchronously but is fast (<500ms) — non-blocking on failure.
+  try {
+    const searchText = [
+      body.name,
+      body.description ?? '',
+      ...(body.tags?.key_topics as string[] ?? []),
+      ...(body.tags?.product_focus as string[] ?? []),
+      ...(body.industry_tags ?? []),
+      body.metadata?.project_name ?? '',
+      body.metadata?.launch_name ?? '',
+      body.campaign_name ?? '',
+      (body.extracted_text ?? '').slice(0, 4000),
+    ].filter(Boolean).join(' ').trim();
+
+    if (searchText) {
+      const embedding = await generateEmbedding(searchText);
+      await service
+        .from('assets')
+        .update({ embedding })
+        .eq('id', asset.id);
+    }
+  } catch (embErr) {
+    // Embedding failure is non-critical — asset is saved, just not searchable yet
+    console.error('Embedding generation failed (non-critical):', embErr);
   }
 
   return Response.json({ asset }, { status: 201 });
