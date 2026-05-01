@@ -96,18 +96,33 @@ export function AssetUploader({ onComplete, onClose }: AssetUploaderProps) {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
+  // Tracks folder upload index via ref so async callbacks always see latest value
+  const folderIdxRef = useRef(0);
 
   const mergedTags: Partial<AutoTagResult> = { ...tags, ...editedTags };
 
   function handleFileChange(selectedFiles: FileList | File[]) {
     const arr = Array.from(selectedFiles);
+    const rejected: string[] = [];
     const valid = arr.filter(f => {
       const v = validateFile(f);
-      if (!v.valid) { setError(v.error ?? 'Invalid file'); return false; }
+      if (!v.valid) { rejected.push(f.name); return false; }
       return true;
     });
-    if (valid.length === 0) return;
-    setError(null);
+    if (valid.length === 0) {
+      setError(
+        rejected.length > 0
+          ? `No supported files found. Skipped: ${rejected.slice(0, 3).join(', ')}${rejected.length > 3 ? ` +${rejected.length - 3} more` : ''}`
+          : 'No supported files found'
+      );
+      return;
+    }
+    if (rejected.length > 0) {
+      // Warn but don't block — valid files were found
+      setError(`${rejected.length} file${rejected.length > 1 ? 's' : ''} skipped (unsupported type): ${rejected.slice(0, 3).join(', ')}${rejected.length > 3 ? ` +${rejected.length - 3} more` : ''}`);
+    } else {
+      setError(null);
+    }
     setFiles(valid.map(f => ({ file: f })));
   }
 
@@ -133,6 +148,7 @@ export function AssetUploader({ onComplete, onClose }: AssetUploaderProps) {
 
   async function uploadFile(fileWithMeta: FileWithMeta) {
     const { file } = fileWithMeta;
+    const isFolderMode = mode === 'folder';
     setStep('uploading');
     setProgress(0);
 
@@ -144,10 +160,6 @@ export function AssetUploader({ onComplete, onClose }: AssetUploaderProps) {
       // Compute hash + duplicate check before uploading
       const buffer = await file.arrayBuffer();
       const { isDuplicate, hash, existingName } = await checkDuplicate(buffer, file.name);
-
-      if (isDuplicate) {
-        setDuplicateWarning(`A file matching "${existingName ?? file.name}" already exists in your library.`);
-      }
       if (hash) setFileHash(hash);
 
       const formData = new FormData();
@@ -166,11 +178,15 @@ export function AssetUploader({ onComplete, onClose }: AssetUploaderProps) {
         storagePath: string; fileUrl: string; extractedText: string;
         fileBase64?: string | null; mimeType?: string | null;
       } = await res.json();
+
+      // Always update state (used by single-file review step)
       setStoragePath(data.storagePath);
       setFileUrl(data.fileUrl);
       setProgress(100);
       setStep('tagging');
 
+      // Auto-tag (collect locally so folder mode can pass directly to save)
+      let resolvedTags: AutoTagResult | null = null;
       try {
         const tagRes = await fetch('/api/assets/auto-tag', {
           method: 'POST',
@@ -183,20 +199,119 @@ export function AssetUploader({ onComplete, onClose }: AssetUploaderProps) {
           }),
         });
         if (tagRes.ok) {
-          const tagData: AutoTagResult = await tagRes.json();
-          setTags(tagData);
+          resolvedTags = await tagRes.json();
+          setTags(resolvedTags);
         }
       } catch {
-        // non-blocking
+        // non-blocking — asset saves without tags if AI is unavailable
       }
 
-      setStep('review');
+      if (isFolderMode) {
+        // Folder mode: skip per-file review and auto-save immediately.
+        // Data is passed directly to avoid React stale-state closure issues.
+        if (isDuplicate) {
+          setDuplicateWarning(`"${existingName ?? file.name}" already exists — saved as new version.`);
+        }
+        await saveFolderFile(file, {
+          storagePath: data.storagePath,
+          fileUrl: data.fileUrl,
+          tags: resolvedTags,
+          fileHash: hash,
+          mimeType: data.mimeType ?? file.type,
+        });
+      } else {
+        // Single file: show review so user can edit tags before saving
+        if (isDuplicate) {
+          setDuplicateWarning(`A file matching "${existingName ?? file.name}" already exists in your library.`);
+        }
+        setStep('review');
+      }
     } catch (err) {
       clearInterval(progressInterval);
       const msg = err instanceof Error ? err.message : 'Upload failed';
       setError(msg);
       setStep('select');
       toast.error(msg);
+    }
+  }
+
+  /**
+   * Saves a folder file directly using local data (avoids stale React state closure).
+   * Called recursively until all folder files are saved.
+   */
+  async function saveFolderFile(
+    file: File,
+    data: { storagePath: string; fileUrl: string; tags: AutoTagResult | null; fileHash: string | null; mimeType: string }
+  ) {
+    setStep('saving');
+    const idx = folderIdxRef.current;
+    const t = data.tags;
+
+    try {
+      const payload = {
+        name: t?.title_suggestion || file.name || 'Untitled',
+        description: t?.description || null,
+        file_url: data.fileUrl,
+        file_type: file.name.split('.').pop()?.toLowerCase() ?? 'unknown',
+        file_size_bytes: file.size ?? null,
+        mime_type: data.mimeType || null,
+        storage_path: data.storagePath,
+        content_type: t?.content_type || null,
+        industry_tags: t?.industry_tags || [],
+        deal_stage_relevance: t?.deal_stage_relevance || [],
+        campaign_name: campaignOverride || t?.campaign_name || null,
+        expires_at: expiryDate || null,
+        tags: {
+          key_topics: t?.key_topics || [],
+          product_focus: t?.product_focus || [],
+          audience_persona: t?.audience_persona || null,
+          tone: t?.tone || null,
+          confidence_score: t?.confidence_score || null,
+          title_suggestion: t?.title_suggestion || null,
+        },
+        metadata: {
+          project_name: projectName || null,
+          launch_name: launchName || null,
+          creative_type: creativeType || null,
+          comments: assetComments || null,
+          file_hash: data.fileHash || null,
+        },
+      };
+
+      const res = await fetch('/api/assets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const err: { error: string } = await res.json();
+        throw new Error(err.error ?? 'Failed to save asset');
+      }
+
+      const nextIdx = idx + 1;
+      folderIdxRef.current = nextIdx;
+      setCurrentFileIdx(nextIdx);
+
+      if (nextIdx < files.length) {
+        // More files to process — continue chain
+        toast.success(`Saved ${idx + 1}/${files.length}: ${file.name}`);
+        setTags(null);
+        setEditedTags({});
+        setDuplicateWarning(null);
+        setError(null);
+        await uploadFile(files[nextIdx]);
+      } else {
+        // All done
+        setStep('done');
+        toast.success(`All ${files.length} asset${files.length > 1 ? 's' : ''} added to library!`);
+        setTimeout(() => onComplete?.(), 1500);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Save failed';
+      setError(msg);
+      setStep('select');
+      toast.error(`Failed saving ${file.name}: ${msg}`);
     }
   }
 
@@ -210,7 +325,10 @@ export function AssetUploader({ onComplete, onClose }: AssetUploaderProps) {
       return;
     }
     if (files.length === 0) return;
-    await uploadFile(files[currentFileIdx]);
+    // Reset folder tracking ref before starting a new batch
+    folderIdxRef.current = 0;
+    setCurrentFileIdx(0);
+    await uploadFile(files[0]);
   }
 
   async function saveYoutubeAsset() {
@@ -220,16 +338,50 @@ export function AssetUploader({ onComplete, onClose }: AssetUploaderProps) {
     const videoId = parseYoutubeId(youtubeUrl);
     if (!videoId) { setError('Invalid YouTube URL. Please use a youtube.com/watch or youtu.be link.'); return; }
 
+    const canonicalUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    const thumbnail = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+    const titleForAI = youtubeTitle.trim() || `YouTube: ${videoId}`;
+
+    // Step 1: AI tagging — Gemini watches the video via its URL
+    setStep('tagging');
+    let ytTags: AutoTagResult | null = null;
+    try {
+      const tagRes = await fetch('/api/assets/auto-tag', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          extractedText: '',
+          fileName: titleForAI,
+          mimeType: 'video/youtube',
+          youtubeUrl: canonicalUrl,
+        }),
+      });
+      if (tagRes.ok) ytTags = await tagRes.json();
+    } catch {
+      // non-blocking — save without AI tags if Gemini fails
+    }
+
+    // Step 2: Save to library
     setStep('saving');
     try {
-      const thumbnail = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
       const payload = {
-        name: youtubeTitle.trim() || `YouTube: ${videoId}`,
-        file_url: `https://www.youtube.com/watch?v=${videoId}`,
+        name: ytTags?.title_suggestion || titleForAI,
+        description: ytTags?.description || null,
+        file_url: canonicalUrl,
         file_type: 'youtube',
         mime_type: 'video/youtube',
-        content_type: 'video' as ContentType,
-        campaign_name: campaignOverride || null,
+        content_type: (ytTags?.content_type || 'video') as ContentType,
+        campaign_name: campaignOverride || ytTags?.campaign_name || null,
+        industry_tags: ytTags?.industry_tags || [],
+        deal_stage_relevance: ytTags?.deal_stage_relevance || [],
+        tags: {
+          key_topics: ytTags?.key_topics || [],
+          product_focus: ytTags?.product_focus || [],
+          audience_persona: ytTags?.audience_persona || null,
+          tone: ytTags?.tone || null,
+          confidence_score: ytTags?.confidence_score || null,
+          title_suggestion: ytTags?.title_suggestion || null,
+        },
         metadata: {
           project_name: projectName || null,
           launch_name: launchName || null,
@@ -252,7 +404,7 @@ export function AssetUploader({ onComplete, onClose }: AssetUploaderProps) {
       }
 
       setStep('done');
-      toast.success('YouTube video added to library!');
+      toast.success('YouTube video analysed and added to library!');
       setTimeout(() => onComplete?.(), 1500);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Save failed';
@@ -740,9 +892,19 @@ export function AssetUploader({ onComplete, onClose }: AssetUploaderProps) {
 
       {/* ── Saving ──────────────────────────────────── */}
       {step === 'saving' && (
-        <div className="py-8 text-center">
-          <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mx-auto mb-3" />
-          <p className="font-medium" style={{ color: 'var(--foreground)' }}>Saving to library…</p>
+        <div className="py-8 text-center space-y-2">
+          <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mx-auto" />
+          <p className="font-medium" style={{ color: 'var(--foreground)' }}>
+            {mode === 'folder' && files.length > 1
+              ? `Saving ${currentFileIdx + 1} of ${files.length}…`
+              : 'Saving to library…'}
+          </p>
+          {mode === 'folder' && files.length > 1 && (
+            <div className="w-48 mx-auto rounded-full h-1.5" style={{ background: 'var(--muted)' }}>
+              <div className="h-1.5 rounded-full transition-all duration-500"
+                   style={{ width: `${((currentFileIdx + 1) / files.length) * 100}%`, background: 'var(--primary)' }} />
+            </div>
+          )}
         </div>
       )}
 

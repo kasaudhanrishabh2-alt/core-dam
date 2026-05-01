@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { autoTagAsset, autoTagAssetWithVision } from '@/lib/claude/autoTag';
+import { autoTagAsset, autoTagAssetWithVision, autoTagYoutubeAsset } from '@/lib/claude/autoTag';
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -15,6 +15,7 @@ export async function POST(request: NextRequest) {
     fileName: string;
     fileBase64?: string | null;
     mimeType?: string | null;
+    youtubeUrl?: string | null;
   } = await request.json();
 
   if (!body.fileName) {
@@ -23,12 +24,15 @@ export async function POST(request: NextRequest) {
 
   try {
     let tags;
-    if (body.fileBase64 && body.mimeType &&
+    if (body.youtubeUrl && body.mimeType === 'video/youtube') {
+      // YouTube: pass URL directly to Gemini — no download needed
+      tags = await autoTagYoutubeAsset(body.youtubeUrl, body.fileName);
+    } else if (body.fileBase64 && body.mimeType &&
         (body.mimeType.startsWith('image/') || body.mimeType.startsWith('video/'))) {
-      // Use Gemini vision for images and videos
+      // Image/video files: use Gemini vision with base64
       tags = await autoTagAssetWithVision(body.fileBase64, body.mimeType, body.fileName);
     } else {
-      // Use Groq text model for documents and PDFs
+      // Documents and PDFs: use Groq text model
       tags = await autoTagAsset(body.extractedText, body.fileName);
     }
     return Response.json(tags);

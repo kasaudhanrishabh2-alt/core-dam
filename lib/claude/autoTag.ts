@@ -5,7 +5,7 @@
  * To upgrade: swap generateText/streamText in lib/ai/provider.ts
  */
 
-import { generateText, generateTextWithVision, streamText } from '@/lib/ai/provider';
+import { generateText, generateTextWithVision, analyzeYoutubeVideo, streamText } from '@/lib/ai/provider';
 import type { AutoTagResult, AssetAnalysis } from '@/types';
 
 /**
@@ -215,6 +215,90 @@ export async function autoTagAssetWithVision(
   const raw = await generateTextWithVision(VISION_TAG_PROMPT(fileName), fileBase64, mimeType);
   const cleaned = raw.replace(/```(?:json)?\n?/g, '').trim();
   return JSON.parse(cleaned) as AutoTagResult;
+}
+
+// ─── YouTube video analysis ──────────────────────────────────────────────────
+
+const YOUTUBE_TAG_PROMPT = (videoTitle: string) =>
+  `You are a marketing content analyst for HOABL (House of Abhinandan Lodha), a premium real estate company in India. HOABL sells branded plotted developments — One Goa, One Nagpur, One Alibaug, One Bengaluru, One Ayodhya and more.
+
+Watch this YouTube video and return ONLY valid JSON with no markdown, no code fences.
+
+Video title context: "${videoTitle}"
+
+Return exactly this JSON shape:
+{
+  "content_type": "one of: case_study|whitepaper|one_pager|presentation|email_template|battlecard|infographic|proposal_template|roi_calculator|competitive_intel|campaign_report|other",
+  "title_suggestion": "descriptive title for this video (include project name if visible)",
+  "description": "2-3 sentence description of what this video shows, which HOABL project it relates to, and the marketing objective",
+  "campaign_name": "HOABL project or campaign name if visible (e.g. One Goa Phase 2), else null",
+  "industry_tags": ["real_estate", "and any relevant tags like premium_plots|gated_community|holiday_homes|launch_film"],
+  "product_focus": ["project names or product types visible, e.g. One Goa|plotted_development"],
+  "deal_stage_relevance": ["one or more of: awareness|consideration|decision|post_sale"],
+  "key_topics": ["5-10 key topic tags based on the video content"],
+  "audience_persona": "who this is targeted at — e.g. HNI investors, NRI buyers, weekend home seekers",
+  "tone": "one of: formal|casual|technical|executive|educational",
+  "confidence_score": 0.0
+}`;
+
+/**
+ * Auto-tags a YouTube video asset using Gemini's native YouTube URL support.
+ * Gemini 1.5+ accepts YouTube URLs directly — no download required.
+ * Cost: ~₹0.65 per 5-min video at current Gemini Flash pricing.
+ */
+export async function autoTagYoutubeAsset(
+  youtubeUrl: string,
+  videoTitle: string
+): Promise<AutoTagResult> {
+  const raw = await analyzeYoutubeVideo(youtubeUrl, YOUTUBE_TAG_PROMPT(videoTitle));
+  const cleaned = raw.replace(/```(?:json)?\n?/g, '').trim();
+  return JSON.parse(cleaned) as AutoTagResult;
+}
+
+/**
+ * Performs deep creative analysis on a YouTube video using Gemini's native URL support.
+ */
+export async function analyzeYoutubeAssetCreative(
+  youtubeUrl: string,
+  videoTitle: string,
+  contentType: string | null
+): Promise<AssetAnalysis> {
+  const prompt = `You are an expert marketing creative analyst specialising in real estate video content. Watch this YouTube video and perform a deep creative analysis. Return ONLY valid JSON — no markdown, no code fences.
+
+Video Title: "${videoTitle}"
+Content Type: ${contentType ?? 'video'}
+
+Return exactly this JSON shape:
+{
+  "narrative_arc": {
+    "hook": "opening scene / attention-grabber (1 sentence, or null)",
+    "problem": "pain point or desire addressed in the video (1-2 sentences, or null)",
+    "solution": "how the HOABL project/product is presented as the solution (1-2 sentences, or null)",
+    "proof": "evidence shown — location shots, amenity walkthroughs, testimonials, pricing (1-2 sentences, or null)",
+    "cta": "call-to-action shown at end of video, or null"
+  },
+  "key_claims": ["specific claims visible, e.g. price points, location benefits, RERA numbers, amenities"],
+  "proof_points": ["specific evidence: location footage, award badges, testimonials, lifestyle shots"],
+  "value_propositions": ["core value props the viewer would take away"],
+  "scores": {
+    "clarity": 7,
+    "persuasiveness": 6,
+    "specificity": 8,
+    "cta_strength": 5
+  },
+  "strengths": ["2-4 specific visual/messaging strengths"],
+  "weaknesses": ["2-4 specific weaknesses or gaps"],
+  "missing_elements": ["elements typical for real estate launch videos that are absent"],
+  "ideal_use_case": "1-2 sentences on the best channel (YouTube Ads, WhatsApp, site visit follow-up etc.) and buyer journey stage",
+  "competing_narratives": "alternative creative angle that could make this stronger, or null"
+}
+
+Scores are integers 0-10. Be specific — describe what you actually see in the video.`;
+
+  const raw = await analyzeYoutubeVideo(youtubeUrl, prompt);
+  const cleaned = raw.replace(/```(?:json)?\n?/g, '').trim();
+  const parsed = JSON.parse(cleaned);
+  return { ...parsed, analyzed_at: new Date().toISOString() } as AssetAnalysis;
 }
 
 /**

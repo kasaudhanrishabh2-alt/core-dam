@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
-import { validateFile } from '@/lib/utils/fileHelpers';
+import { validateFile, resolveFileMimeType } from '@/lib/utils/fileHelpers';
 
 // Service client for storage operations (bypasses RLS for storage)
 function getServiceClient() {
@@ -67,6 +67,9 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: validation.error }, { status: 400 });
   }
 
+  // Resolve the effective MIME type (handles application/octet-stream from folder picker)
+  const effectiveMimeType = resolveFileMimeType(file);
+
   const ext = file.name.split('.').pop()?.toLowerCase() ?? 'bin';
   const storagePath = `${user.id}/${uuidv4()}.${ext}`;
 
@@ -77,7 +80,7 @@ export async function POST(request: NextRequest) {
   const { error: uploadError } = await serviceClient.storage
     .from('assets')
     .upload(storagePath, buffer, {
-      contentType: file.type,
+      contentType: effectiveMimeType,
       upsert: false,
     });
 
@@ -96,7 +99,7 @@ export async function POST(request: NextRequest) {
   const extractedText = extractTextFromBuffer(buffer, file.type);
 
   // For images and videos, return base64 so the auto-tag route can use Gemini vision
-  const isVisual = file.type.startsWith('image/') || file.type.startsWith('video/');
+  const isVisual = effectiveMimeType.startsWith('image/') || effectiveMimeType.startsWith('video/');
   let fileBase64: string | null = null;
   if (isVisual) {
     // Cap at 10 MB inline — larger videos should go through YouTube ingestion instead
@@ -111,6 +114,6 @@ export async function POST(request: NextRequest) {
     extractedText,
     fileHash: fileHash ?? null,
     fileBase64,
-    mimeType: file.type,
+    mimeType: effectiveMimeType,
   });
 }

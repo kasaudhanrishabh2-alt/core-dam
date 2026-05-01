@@ -104,6 +104,47 @@ export async function generateTextWithVision(
 }
 
 /**
+ * Analyses a YouTube video by passing its URL directly to Gemini via fileData.fileUri.
+ * Gemini 1.5+ accepts YouTube URLs natively — no download required.
+ *
+ * Cost: ~$0.008 per 5-minute video at gemini-flash-latest pricing.
+ */
+export async function analyzeYoutubeVideo(
+  youtubeUrl: string,
+  prompt: string
+): Promise<string> {
+  const apiKey = process.env.GOOGLE_AI_API_KEY;
+  if (!apiKey) throw new Error('GOOGLE_AI_API_KEY is not set');
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{
+        parts: [
+          { text: prompt },
+          { fileData: { mimeType: 'video/*', fileUri: youtubeUrl } },
+        ],
+      }],
+      generationConfig: { temperature: 0.3, maxOutputTokens: 2048 },
+    }),
+  });
+
+  if (res.status === 429) {
+    throw new Error('Gemini quota exceeded. The YouTube video analysis could not be completed.');
+  }
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Gemini YouTube analysis error (${res.status}): ${body}`);
+  }
+  const data = await res.json() as {
+    candidates: Array<{ content: { parts: Array<{ text: string }> } }>;
+  };
+  return data.candidates[0]?.content?.parts[0]?.text ?? '';
+}
+
+/**
  * Generates a 768-dimensional embedding vector.
  * Stays on Gemini — embeddings have a separate quota from generation.
  */

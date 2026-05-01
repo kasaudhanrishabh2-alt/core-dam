@@ -4,7 +4,7 @@ import { NextRequest } from 'next/server';
 export const maxDuration = 60;
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
-import { analyzeAssetCreative, analyzeAssetCreativeWithVision } from '@/lib/claude/autoTag';
+import { analyzeAssetCreative, analyzeAssetCreativeWithVision, analyzeYoutubeAssetCreative } from '@/lib/claude/autoTag';
 
 function getService() {
   return createServiceClient(
@@ -33,13 +33,18 @@ export async function POST(
   if (error || !asset) return Response.json({ error: 'Asset not found' }, { status: 404 });
 
   const mimeType: string = asset.mime_type ?? '';
-  const isVisual = mimeType.startsWith('image/') || mimeType.startsWith('video/');
+  const isYoutube = mimeType === 'video/youtube' || asset.file_url?.includes('youtube.com') || asset.file_url?.includes('youtu.be');
+  const isVisual = !isYoutube && (mimeType.startsWith('image/') || mimeType.startsWith('video/'));
 
   try {
     let analysis;
 
-    if (isVisual && asset.file_url) {
-      // Download file from storage and pass to Gemini vision
+    if (isYoutube && asset.file_url) {
+      // YouTube assets: pass URL directly to Gemini — no download needed
+      // Gemini 1.5+ accepts YouTube URLs natively via fileData.fileUri
+      analysis = await analyzeYoutubeAssetCreative(asset.file_url, asset.name, asset.content_type);
+    } else if (isVisual && asset.file_url) {
+      // Image/video assets: download from storage and pass to Gemini vision
       const fileRes = await fetch(asset.file_url);
       if (!fileRes.ok) throw new Error('Failed to fetch asset file for analysis');
       const buffer = await fileRes.arrayBuffer();

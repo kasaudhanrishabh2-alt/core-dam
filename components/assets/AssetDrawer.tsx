@@ -98,7 +98,7 @@ function AnalysisPanel({
   const arc = analysis.narrative_arc;
   const hasArc = arc.hook || arc.problem || arc.solution || arc.proof || arc.cta;
   const allZero = Object.values(analysis.scores).every((s) => !s);
-  const isVisual = mimeType?.startsWith('image/') || mimeType?.startsWith('video/');
+  const isVisual = mimeType?.startsWith('image/') || mimeType?.startsWith('video/') || mimeType === 'video/youtube';
 
   return (
     <div className="p-5 space-y-5">
